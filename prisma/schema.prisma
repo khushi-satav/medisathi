@@ -1,0 +1,316 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── USERS ───────────────────────────────────────
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  phone           String?   @unique
+  passwordHash    String
+  name            String
+  age             Int?
+  gender          String?
+  profilePhoto    String?
+  language        String    @default("en")
+  timezone        String    @default("Asia/Kolkata")
+  role            UserRole  @default(PATIENT)
+  isVerified      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  conditions      UserCondition[]
+  medications     Medication[]
+  doseLogs        DoseLog[]
+  prescriptions   Prescription[]
+  caregiverLinks  CaregiverLink[] @relation("Patient")
+  managedPatients CaregiverLink[] @relation("Caregiver")
+  notifications   Notification[]
+  adherenceStats  AdherenceStats[]
+  predictions     AdherencePrediction[]
+  emergencyContacts EmergencyContact[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  PATIENT
+  CAREGIVER
+  DOCTOR
+  ADMIN
+}
+
+model UserCondition {
+  id        String @id @default(cuid())
+  userId    String
+  name      String  // "Type 2 Diabetes", "Hypertension"
+  icdCode   String? // ICD-10 code
+  severity  String?
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_conditions")
+}
+
+// ─── MEDICINES MASTER TABLE ────────────────────────
+model Medicine {
+  id              String  @id @default(cuid())
+  name            String
+  genericName     String
+  brandNames      String[]
+  drugClass       String
+  fdaId           String? @unique  // OpenFDA ID
+  activeIngredient String
+  dosageForms     String[]  // tablet, capsule, liquid
+  standardDosages String[]  // "500mg", "10mg"
+  indications     String[]  // conditions it treats
+  contraindications String[]
+  sideEffects     String[]
+  interactions    String[]  // interacts with these drug names
+  foodInteractions String[]
+  imageUrl        String?
+  colorDescription String?  // "white oval tablet"
+  imprint         String?   // "M500" printed on pill
+  createdAt       DateTime @default(now())
+  
+  medications     Medication[]
+
+  @@map("medicines")
+}
+
+// ─── PATIENT MEDICATIONS ──────────────────────────
+model Medication {
+  id              String    @id @default(cuid())
+  userId          String
+  medicineId      String?   // links to Medicine master
+  
+  // Can be custom if not in DB
+  customName      String?
+  name            String    // display name
+  dosage          String    // "500mg"
+  form            MedForm   @default(TABLET)
+  condition       String?
+  color           String    @default("#6C63FF")
+  
+  // Schedule
+  times           String[]  // ["08:00", "20:00"]
+  foodInstruction FoodInstruction @default(AFTER_MEAL)
+  startDate       DateTime
+  endDate         DateTime?
+  isActive        Boolean   @default(true)
+  isOngoing       Boolean   @default(true)
+  
+  // Stock
+  stockCount      Int       @default(30)
+  stockUpdatedAt  DateTime  @default(now())
+  refillAlert     Int       @default(7)  // alert when X days left
+  
+  // Source
+  prescriptionId  String?
+  addedByOCR      Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medicine        Medicine? @relation(fields: [medicineId], references: [id])
+  prescription    Prescription? @relation(fields: [prescriptionId], references: [id])
+  doseLogs        DoseLog[]
+
+  @@map("medications")
+}
+
+enum MedForm {
+  TABLET, CAPSULE, LIQUID, INJECTION, DROPS, PATCH, INHALER, CREAM, OTHER
+}
+
+enum FoodInstruction {
+  BEFORE_MEAL, AFTER_MEAL, WITH_MEAL, EMPTY_STOMACH, ANY_TIME
+}
+
+// ─── DOSE LOGS ────────────────────────────────────
+model DoseLog {
+  id              String    @id @default(cuid())
+  userId          String
+  medicationId    String
+  
+  scheduledTime   DateTime
+  scheduledDate   String    // "2026-04-28"
+  takenAt         DateTime?
+  status          DoseStatus
+  skipReason      String?
+  snoozedUntil    DateTime?
+  
+  // Context
+  location        String?   // GPS optional
+  deviceType      String?   // mobile/web
+  loggedBy        String?   // user ID (caregiver can log)
+  
+  createdAt       DateTime  @default(now())
+
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medication      Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+
+  @@unique([medicationId, scheduledDate, scheduledTime])
+  @@map("dose_logs")
+}
+
+enum DoseStatus {
+  TAKEN, MISSED, SKIPPED, SNOOZED, PENDING
+}
+
+// ─── PRESCRIPTIONS (OCR) ─────────────────────────
+model Prescription {
+  id              String    @id @default(cuid())
+  userId          String
+  
+  // File
+  fileUrl         String    // Supabase Storage URL
+  fileName        String
+  fileType        String    // image/png, application/pdf
+  fileSize        Int
+  
+  // OCR Results
+  ocrRawText      String?   // raw OCR output
+  ocrConfidence   Float?    // 0-1
+  extractedData   Json?     // structured extraction
+  
+  // AI Results
+  aiExtracted     Json?     // GPT-4o parsed medicines
+  aiConfidence    Float?
+  
+  // Doctor info (if extracted)
+  doctorName      String?
+  doctorReg       String?
+  hospitalName    String?
+  prescriptionDate DateTime?
+  
+  // Status
+  status          PrescriptionStatus @default(PROCESSING)
+  reviewedAt      DateTime?
+  
+  createdAt       DateTime  @default(now())
+
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  medications     Medication[]
+
+  @@map("prescriptions")
+}
+
+enum PrescriptionStatus {
+  PROCESSING, OCR_DONE, AI_DONE, REVIEWED, ADDED_TO_SCHEDULE, FAILED
+}
+
+// ─── ADHERENCE STATS (pre-computed) ──────────────
+model AdherenceStats {
+  id              String   @id @default(cuid())
+  userId          String
+  date            String   // "2026-04-28"
+  
+  totalDoses      Int
+  takenDoses      Int
+  missedDoses     Int
+  skippedDoses    Int
+  adherenceRate   Float    // 0-100
+  
+  // Streak
+  streakDay       Int      @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@map("adherence_stats")
+}
+
+// ─── AI PREDICTIONS ───────────────────────────────
+model AdherencePrediction {
+  id              String   @id @default(cuid())
+  userId          String
+  medicationId    String?
+  
+  predictionDate  String   // date being predicted
+  predictedAt     DateTime @default(now())
+  
+  missRisk        Float    // 0-1 probability of missing
+  riskLevel       RiskLevel
+  riskFactors     String[] // reasons for risk
+  recommendation  String
+  
+  // Was it accurate?
+  actualStatus    DoseStatus?
+  wasAccurate     Boolean?
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("adherence_predictions")
+}
+
+enum RiskLevel {
+  LOW, MEDIUM, HIGH, CRITICAL
+}
+
+// ─── CAREGIVER LINKS ─────────────────────────────
+model CaregiverLink {
+  id              String   @id @default(cuid())
+  patientId       String
+  caregiverId     String
+  relationship    String   // "Spouse", "Parent", "Nurse"
+  permissions     String[] // ["view_meds", "view_logs", "send_reminders"]
+  isActive        Boolean  @default(true)
+  linkedAt        DateTime @default(now())
+
+  patient         User     @relation("Patient", fields: [patientId], references: [id])
+  caregiver       User     @relation("Caregiver", fields: [caregiverId], references: [id])
+
+  @@unique([patientId, caregiverId])
+  @@map("caregiver_links")
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────
+model Notification {
+  id              String   @id @default(cuid())
+  userId          String
+  
+  type            NotifType
+  title           String
+  body            String
+  data            Json?
+  
+  channel         String[] // ["push", "sms", "email", "call"]
+  isRead          Boolean  @default(false)
+  sentAt          DateTime?
+  readAt          DateTime?
+  
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum NotifType {
+  DOSE_REMINDER, DOSE_MISSED, DOSE_OVERDUE, REFILL_ALERT,
+  CAREGIVER_ALERT, STREAK_MILESTONE, WEEKLY_REPORT, SYSTEM
+}
+
+// ─── EMERGENCY CONTACTS ───────────────────────────
+model EmergencyContact {
+  id           String @id @default(cuid())
+  userId       String
+  name         String
+  phone        String
+  relationship String
+  isPrimary    Boolean @default(false)
+  
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("emergency_contacts")
+}
