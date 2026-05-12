@@ -57,8 +57,13 @@ export const doseLogsService = {
 // ─── Prescriptions ───────────────────────────────────────────────────────────
 export const prescriptionsService = {
   getAll: () => api.get('/prescriptions'),
-  upload: (data: { fileUrl: string; fileName: string; imageBase64?: string; mimeType?: string }) =>
-    api.post('/prescriptions', data),
+  upload: (file: File) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return api.post('/prescriptions/upload', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   addMedications: (prescriptionId: string, selectedMedicines?: any[]) =>
     api.post('/prescriptions/add-medications', { prescriptionId, selectedMedicines }),
 };
@@ -66,6 +71,11 @@ export const prescriptionsService = {
 // ─── Insights ────────────────────────────────────────────────────────────────
 export const insightsService = {
   getStats: (days = 30) => api.get(`/insights?days=${days}`),
+};
+
+// ─── AI ──────────────────────────────────────────────────────────────────────
+export const aiService = {
+  ask: (question: string) => api.post('/ai/ask', { question }),
 };
 
 export default api;

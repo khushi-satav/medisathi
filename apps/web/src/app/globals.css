@@ -69,11 +69,11 @@ body {
 
 /* Cards */
 .card {
-  @apply bg-white rounded-2xl shadow-sm border border-slate-100 p-6;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  @apply bg-white/90 backdrop-blur-xl rounded-2xl shadow-glass border border-white/40 p-6;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 .card:hover {
-  @apply shadow-md;
+  @apply shadow-lg transform -translate-y-1;
 }
 
 /* Dose status pills */

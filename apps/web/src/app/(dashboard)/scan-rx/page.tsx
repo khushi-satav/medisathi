@@ -61,22 +61,10 @@ export default function ScanRxPage() {
 
     setUploading(true);
     try {
-      // Convert to base64
-      const base64 = await new Promise<string>((resolve) => {
-        const r = new FileReader();
-        r.onload = () => resolve((r.result as string).split(',')[1]);
-        r.readAsDataURL(file);
-      });
-
-      const { data } = await prescriptionsService.upload({
-        fileUrl: `prescription_${Date.now()}`,
-        fileName: file.name,
-        imageBase64: base64,
-        mimeType: file.type,
-      });
+      const { data } = await prescriptionsService.upload(file);
 
       setPrescriptionId(data.prescription._id);
-      const meds = data.prescription.extractedMedications || [];
+      const meds = data.extractedMedicines || [];
       setExtractedMeds(meds.map((m: any) => ({ ...m, selected: true })));
 
       if (meds.length > 0) {
