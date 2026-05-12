@@ -1,1 +1,1 @@
-feat: premium AI prescription scanner UI  
+feat: add Scan Prescription to sidebar nav between Tracker and AI Insights
