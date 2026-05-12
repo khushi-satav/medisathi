@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, Pill, Activity, Settings,
-  LogOut, ChevronRight, User, MessageSquare, Calendar, Bell, LineChart
+  LogOut, ChevronRight, User, MessageSquare, Calendar, Bell, LineChart, Users
 } from 'lucide-react';
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/medications',     label: 'Medications',  icon: Pill },
   { href: '/dose-tracker',    label: 'Tracker',      icon: Calendar },
   { href: '/insights',        label: 'AI Insights',  icon: LineChart },
+  { href: '/caregiver',       label: 'Caregiver',    icon: Users },
   { href: '/messages',        label: 'Messages',     icon: MessageSquare, badge: 2 },
   { href: '/settings',        label: 'Settings',     icon: Settings },
 ];

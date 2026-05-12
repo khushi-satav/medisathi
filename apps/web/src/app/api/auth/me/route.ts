@@ -42,3 +42,24 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+// PATCH — same as PUT, used by onboarding flow
+export async function PATCH(req: NextRequest) {
+  try {
+    const authUser = requireAuth(req);
+    await connectDB();
+    const updates = await req.json();
+
+    delete updates.passwordHash;
+    delete updates.role;
+    delete updates.email;
+
+    const user = await User.findByIdAndUpdate(authUser.id, updates, { new: true }).select('-passwordHash');
+    return NextResponse.json({ user });
+  } catch (error: any) {
+    if (error.message === 'UNAUTHORIZED') {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}

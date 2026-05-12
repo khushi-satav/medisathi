@@ -35,6 +35,7 @@ export const authService = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),
   getMe: () => api.get('/auth/me'),
   updateMe: (data: any) => api.put('/auth/me', data),
+  patchMe:  (data: any) => api.patch('/auth/me', data),
 };
 
 // ─── Medications ─────────────────────────────────────────────────────────────

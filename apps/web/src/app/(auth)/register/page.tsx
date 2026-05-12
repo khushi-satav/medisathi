@@ -53,7 +53,7 @@ export default function RegisterPage() {
       const { data } = await authService.register(payload);
       login(data.user, data.token);
       toast.success(`Welcome to MediSaathi, ${data.user.name}! 🎉`);
-      router.push('/dashboard');
+      router.push('/onboarding');
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Registration failed');
     } finally {
