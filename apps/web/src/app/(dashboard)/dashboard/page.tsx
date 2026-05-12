@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { doseLogsService, insightsService } from '@/services/api';
-import { CheckCircle2, Clock, AlertCircle, Flame, Pill, TrendingUp, ChevronRight, Zap, Activity } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, Flame, Pill, TrendingUp, ChevronRight, Activity } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -319,44 +319,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Quick actions */}
-          <div className="card flex-1">
-            <h3 className="font-bold text-slate-800 text-lg mb-5">Quick Actions</h3>
-            <div className="space-y-3">
-              <Link href="/scan-rx" className="flex items-center space-x-4 p-4 rounded-2xl border border-indigo-100 bg-indigo-50/50 hover:bg-indigo-50 hover:border-indigo-200 transition-all hover:shadow-md hover:-translate-y-0.5 group">
-                <div className="p-3 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-200">
-                  <Zap size={20} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-800">Scan Prescription</p>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">AI-powered extraction</p>
-                </div>
-                <ChevronRight size={18} className="text-slate-300 group-hover:text-indigo-600 transition-colors" />
-              </Link>
-              
-              <Link href="/medications" className="flex items-center space-x-4 p-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 hover:bg-emerald-50 hover:border-emerald-200 transition-all hover:shadow-md hover:-translate-y-0.5 group">
-                <div className="p-3 bg-emerald-600 rounded-xl text-white shadow-md shadow-emerald-200">
-                  <Pill size={20} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-800">Manage Meds</p>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">Add or update inventory</p>
-                </div>
-                <ChevronRight size={18} className="text-slate-300 group-hover:text-emerald-600 transition-colors" />
-              </Link>
-              
-              <Link href="/insights" className="flex items-center space-x-4 p-4 rounded-2xl border border-purple-100 bg-purple-50/50 hover:bg-purple-50 hover:border-purple-200 transition-all hover:shadow-md hover:-translate-y-0.5 group">
-                <div className="p-3 bg-purple-600 rounded-xl text-white shadow-md shadow-purple-200">
-                  <Activity size={20} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-slate-800">View Insights</p>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">Deep adherence analytics</p>
-                </div>
-                <ChevronRight size={18} className="text-slate-300 group-hover:text-purple-600 transition-colors" />
-              </Link>
-            </div>
-          </div>
+
           
         </motion.div>
       </div>

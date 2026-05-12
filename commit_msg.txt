@@ -1,1 +1,1 @@
-feat: add Scan Prescription to sidebar nav between Tracker and AI Insights
+feat: remove Quick Actions card from dashboard
