@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongoose';
 import Prescription from '@/models/Prescription';
 import Medication from '@/models/Medication';
 import { requireAuth } from '@/lib/auth';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Add extracted medications from prescription to user's medication list
 export async function POST(req: NextRequest) {
@@ -16,6 +17,33 @@ export async function POST(req: NextRequest) {
     if (!prescription) return NextResponse.json({ error: 'Prescription not found' }, { status: 404 });
 
     const medicines = selectedMedicines || prescription.aiExtracted?.medicines || [];
+    
+    // --- MODIFICATION: Drug Interaction Check ---
+    const existingMeds = await Medication.find({ userId: user.id, isActive: true });
+    let interactionReport = "";
+    
+    if (existingMeds.length > 0 && medicines.length > 0 && process.env.GEMINI_API_KEY) {
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        
+        const existingNames = existingMeds.map(m => m.name).join(', ');
+        const newNames = medicines.map((m: any) => m.name).join(', ');
+        
+        const prompt = `Check for serious drug-drug interactions between these two lists of medications:
+        Existing: [${existingNames}]
+        New: [${newNames}]
+        
+        If there are serious risks, list them briefly. If safe, say "No serious interactions detected".
+        Return ONLY the summary text.`;
+        
+        const result = await model.generateContent(prompt);
+        interactionReport = result.response.text();
+      } catch (err) {
+        console.error('Interaction check failed:', err);
+      }
+    }
+
     const created = [];
 
     for (const med of medicines) {
@@ -41,7 +69,11 @@ export async function POST(req: NextRequest) {
 
     await Prescription.findByIdAndUpdate(prescriptionId, { status: 'added' });
 
-    return NextResponse.json({ medications: created, count: created.length });
+    return NextResponse.json({ 
+      medications: created, 
+      count: created.length,
+      interactionWarning: interactionReport 
+    });
   } catch (error: any) {
     if (error.message === 'UNAUTHORIZED') return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
     return NextResponse.json({ error: error.message }, { status: 500 });

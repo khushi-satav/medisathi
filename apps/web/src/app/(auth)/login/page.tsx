@@ -39,56 +39,56 @@ export default function LoginPage() {
       {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 gradient-primary flex-col justify-between p-12 text-white">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/30 shadow-glass">
             <Pill size={24} />
           </div>
-          <span className="text-2xl font-bold">MediSaathi</span>
+          <span className="text-2xl font-bold tracking-tight">MediSaathi</span>
         </div>
         <div>
-          <h1 className="text-5xl font-bold leading-tight mb-6">
+          <h1 className="text-5xl font-bold leading-tight mb-6 tracking-tight">
             Your personal<br />medicine companion
           </h1>
-          <p className="text-indigo-200 text-lg mb-10">
+          <p className="text-white/80 text-lg mb-10 font-medium">
             Track medications, scan prescriptions with AI, and never miss a dose again.
           </p>
-          <div className="space-y-4">
+          <div className="space-y-5">
             {[
               { icon: <Pill size={20} />, text: 'Smart medication reminders' },
               { icon: <Activity size={20} />, text: 'AI-powered prescription scanning' },
               { icon: <Shield size={20} />, text: 'Caregiver monitoring & alerts' },
             ].map((f, i) => (
-              <div key={i} className="flex items-center space-x-3 text-indigo-100">
-                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">{f.icon}</div>
-                <span>{f.text}</span>
+              <div key={i} className="flex items-center space-x-4 text-white/90">
+                <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-sm border border-white/20 shadow-sm">{f.icon}</div>
+                <span className="font-medium text-lg">{f.text}</span>
               </div>
             ))}
           </div>
         </div>
-        <p className="text-indigo-300 text-sm">© 2025 MediSaathi. Built with ❤️ for better health.</p>
+        <p className="text-white/60 text-sm font-medium">© 2025 MediSaathi. Built with ❤️ for better health.</p>
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
+      <div className="flex-1 flex items-center justify-center p-8 bg-background">
         <div className="w-full max-w-md">
           {/* Mobile logo */}
-          <div className="flex items-center space-x-2 mb-8 lg:hidden">
-            <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center">
+          <div className="flex items-center space-x-3 mb-10 lg:hidden">
+            <div className="w-10 h-10 gradient-primary rounded-2xl flex items-center justify-center shadow-warm">
               <Pill size={20} className="text-white" />
             </div>
-            <span className="text-xl font-bold text-slate-800">MediSaathi</span>
+            <span className="text-2xl font-bold text-foreground">MediSaathi</span>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-1">Welcome back</h2>
-            <p className="text-slate-500 text-sm mb-8">Sign in to your account to continue</p>
+          <div className="bg-card rounded-3xl shadow-card border border-border p-8 sm:p-10">
+            <h2 className="text-3xl font-bold text-foreground mb-2">Welcome back</h2>
+            <p className="text-muted text-base mb-8">Sign in to your account to continue</p>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <label className="label">Email address</label>
+                <label className="label text-foreground font-semibold mb-1.5 block">Email address</label>
                 <input
                   id="email"
                   type="email"
-                  className="input"
+                  className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3"
                   placeholder="you@example.com"
                   value={form.email}
                   onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
@@ -96,12 +96,12 @@ export default function LoginPage() {
                 />
               </div>
               <div>
-                <label className="label">Password</label>
+                <label className="label text-foreground font-semibold mb-1.5 block">Password</label>
                 <div className="relative">
                   <input
                     id="password"
                     type={showPw ? 'text' : 'password'}
-                    className="input pr-10"
+                    className="input w-full pr-12 bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3"
                     placeholder="Enter your password"
                     value={form.password}
                     onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
@@ -109,10 +109,10 @@ export default function LoginPage() {
                   />
                   <button
                     type="button"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors"
                     onClick={() => setShowPw(!showPw)}
                   >
-                    {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPw ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
               </div>
@@ -121,7 +121,7 @@ export default function LoginPage() {
                 id="login-submit"
                 type="submit"
                 disabled={loading}
-                className="btn-primary w-full flex items-center justify-center space-x-2"
+                className="btn-primary w-full flex items-center justify-center space-x-2 py-3.5 text-lg rounded-2xl shadow-warm hover:shadow-elevated transition-all"
               >
                 {loading ? (
                   <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -131,18 +131,21 @@ export default function LoginPage() {
               </button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-slate-500">
+            <div className="mt-8 text-center">
+              <p className="text-base text-muted">
                 Don&apos;t have an account?{' '}
-                <Link href="/register" className="text-indigo-600 font-semibold hover:underline">
+                <Link href="/register" className="text-primary font-bold hover:text-primary-dark hover:underline transition-colors">
                   Create one free
                 </Link>
               </p>
             </div>
 
             {/* Demo credentials */}
-            <div className="mt-4 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-              <p className="text-xs text-indigo-600 font-medium">Demo: use any email — register first!</p>
+            <div className="mt-6 p-4 bg-secondary/10 rounded-2xl border border-secondary/30">
+              <p className="text-sm text-primary-dark font-medium flex items-center justify-center space-x-2">
+                <span>✨</span>
+                <span>Demo: use any email — register first!</span>
+              </p>
             </div>
           </div>
         </div>
@@ -150,3 +153,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

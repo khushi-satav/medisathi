@@ -188,3 +188,7 @@ async def retrain_model(
 @app.get("/health")
 async def health():
     return {"status": "ok", "model_ready": adherence_model is not None}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

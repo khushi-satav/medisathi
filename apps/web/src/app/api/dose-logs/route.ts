@@ -52,6 +52,49 @@ export async function POST(req: NextRequest) {
       { upsert: true, new: true }
     );
 
+    // --- MODIFICATION: Sync with ML API ---
+    try {
+      const mlApiUrl = process.env.ML_API_URL || 'http://localhost:8000';
+      const scheduledTimeDate = new Date(scheduledTime);
+      
+      await fetch(`${mlApiUrl}/log-dose`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-API-Secret': process.env.ML_API_SECRET || ''
+        },
+        body: JSON.stringify({
+          userId: user.id,
+          medicationId,
+          status: status.toUpperCase(),
+          scheduledTime: scheduledTime,
+          hour: scheduledTimeDate.getHours(),
+          dayOfWeek: scheduledTimeDate.getDay()
+        })
+      });
+      console.log('✅ Dose logged to ML API');
+    } catch (mlErr) {
+      console.error('⚠️ ML API Sync failed:', mlErr);
+    }
+
+    // --- MODIFICATION: Escalation on Missed Dose ---
+    if (status === 'missed' || status === 'overdue') {
+      try {
+        const med = await Medication.findById(medicationId);
+        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/escalation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            patientId: user.id,
+            message: `Emergency Alert from MediSaathi. You missed your scheduled dose of ${med?.name || 'medication'}. Please take it immediately or contact your caregiver.`
+          })
+        });
+        console.log('🚨 Escalation call triggered');
+      } catch (escErr) {
+        console.error('⚠️ Escalation trigger failed:', escErr);
+      }
+    }
+
     return NextResponse.json({ log, stats });
   } catch (error: any) {
     if (error.message === 'UNAUTHORIZED') return NextResponse.json({ error: 'Not authorized' }, { status: 401 });

@@ -49,7 +49,7 @@ const STATUS_COLORS: Record<string, string> = {
   skipped:  'bg-amber-50/60 border-amber-100',
   pending:  'bg-blue-50/60 border-blue-100',
   overdue:  'bg-orange-50/60 border-orange-100',
-  upcoming: 'bg-white/60 border-slate-100',
+  upcoming: 'bg-background/60 border-border',
 };
 
 const PILL_COLORS: Record<string, string> = {
@@ -58,7 +58,7 @@ const PILL_COLORS: Record<string, string> = {
   skipped: 'bg-amber-100 text-amber-700',
   pending: 'bg-blue-100 text-blue-700', 
   overdue: 'bg-orange-100 text-orange-700', 
-  upcoming: 'bg-slate-100 text-slate-600',
+  upcoming: 'bg-border text-muted',
 };
 
 const DOT_COLORS: Record<string, string> = {
@@ -67,7 +67,7 @@ const DOT_COLORS: Record<string, string> = {
   skipped: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]',
   pending: 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]', 
   overdue: 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.5)]', 
-  upcoming: 'bg-slate-400',
+  upcoming: 'bg-muted',
 };
 
 // Animation Variants
@@ -120,50 +120,50 @@ export default function DashboardPage() {
       className="p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 max-w-[1400px] mx-auto w-full"
     >
       {/* ─── Header Hero ───────────────────────────────────────────────────────── */}
-      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[2rem] bg-[#1a1a2e] shadow-2xl">
+      <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[2rem] gradient-primary shadow-elevated">
         <div className="absolute inset-0">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-primary/30 to-secondary/30 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 mix-blend-screen" />
-          <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-blue-500/20 to-purple-500/20 rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4 mix-blend-screen" />
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-br from-white/20 to-transparent rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 mix-blend-screen" />
+          <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-secondary/40 to-transparent rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4 mix-blend-screen" />
         </div>
         
         <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="z-10">
             <motion.p 
               initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
-              className="text-white/70 text-sm font-medium tracking-wide uppercase mb-2 flex items-center"
+              className="text-white/80 text-sm font-semibold tracking-wide uppercase mb-2 flex items-center"
             >
-              <Activity size={14} className="mr-2" />
+              <Activity size={16} className="mr-2" />
               {greeting()}, {user?.name?.split(' ')[0] || 'Friend'}
             </motion.p>
             
             <div className="mt-2">
               {schedLoading ? (
-                <div className="h-10 w-48 bg-white/10 animate-pulse rounded-lg mt-2" />
+                <div className="h-10 w-48 bg-white/20 animate-pulse rounded-xl mt-2" />
               ) : schedule.length === 0 ? (
                 <Link href="/medications" className="block cursor-pointer group">
-                  <p className="text-white/70 text-sm font-medium mb-1">Get started</p>
-                  <h2 className="text-white text-3xl md:text-4xl font-extrabold tracking-tight group-hover:text-primary-light transition-colors flex items-center">
+                  <p className="text-white/80 text-sm font-medium mb-1">Get started</p>
+                  <h2 className="text-white text-3xl md:text-4xl font-extrabold tracking-tight flex items-center">
                     Add your first medication <ChevronRight size={28} className="ml-2 transition-transform group-hover:translate-x-1" />
                   </h2>
-                  <p className="text-white/60 text-sm mt-2">Tap here to set up your schedule</p>
+                  <p className="text-white/70 text-sm mt-2">Tap here to set up your schedule</p>
                 </Link>
               ) : (
                 <div>
-                  <p className="text-white/70 text-sm font-medium mb-1">Today's progress</p>
+                  <p className="text-white/80 text-sm font-medium mb-1">Today's progress</p>
                   <h2 className="text-white text-3xl md:text-4xl font-extrabold tracking-tight">
-                    {taken} <span className="text-white/50 text-2xl font-semibold">/ {todayStats.total} doses taken</span>
+                    {taken} <span className="text-white/60 text-2xl font-semibold">/ {todayStats.total} doses taken</span>
                   </h2>
                   {upcoming.length > 0 ? (
-                    <div className="mt-4 flex items-center bg-white/10 backdrop-blur-md rounded-xl px-4 py-2 w-fit border border-white/10">
-                      <Clock size={16} className="text-white/80 mr-2" />
-                      <p className="text-white/90 text-sm font-medium">
-                        Next: <span className="font-bold text-white">{upcoming[0].medicationName}</span> at {upcoming[0].scheduledTime}
+                    <div className="mt-4 flex items-center bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2 w-fit border border-white/20">
+                      <Clock size={16} className="text-white/90 mr-2" />
+                      <p className="text-white text-sm font-medium">
+                        Next: <span className="font-bold">{upcoming[0].medicationName}</span> at {upcoming[0].scheduledTime}
                       </p>
                     </div>
                   ) : (
-                    <div className="mt-4 flex items-center bg-emerald-500/20 backdrop-blur-md rounded-xl px-4 py-2 w-fit border border-emerald-500/30">
-                      <CheckCircle2 size={16} className="text-emerald-400 mr-2" />
-                      <p className="text-emerald-50 text-sm font-medium">All doses taken today!</p>
+                    <div className="mt-4 flex items-center bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2 w-fit border border-white/20">
+                      <CheckCircle2 size={16} className="text-emerald-300 mr-2" />
+                      <p className="text-white text-sm font-medium">All doses taken today!</p>
                     </div>
                   )}
                 </div>
@@ -180,16 +180,16 @@ export default function DashboardPage() {
       {/* ─── Stat cards ───────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {[
-          { label: "Today's Doses", value: `${taken}/${todayStats.total}`, icon: <Pill size={22} />, color: 'bg-primary/10 text-primary', border: 'border-primary/10' },
-          { label: 'Taken Today',   value: taken, icon: <CheckCircle2 size={22} />, color: 'bg-emerald-100 text-emerald-600', border: 'border-emerald-100' },
-          { label: 'Missed Today',  value: todayStats.missed, icon: <AlertCircle size={22} />, color: 'bg-red-100 text-red-600', border: 'border-red-100' },
-          { label: '7-Day Streak',  value: `${streak}d 🔥`, icon: <Flame size={22} />, color: 'bg-orange-100 text-orange-600', border: 'border-orange-100' },
+          { label: "Today's Doses", value: `${taken}/${todayStats.total}`, icon: <Pill size={22} />, color: 'bg-primary/10 text-primary', border: 'border-primary/20' },
+          { label: 'Taken Today',   value: taken, icon: <CheckCircle2 size={22} />, color: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' },
+          { label: 'Missed Today',  value: todayStats.missed, icon: <AlertCircle size={22} />, color: 'bg-red-100 text-red-700', border: 'border-red-200' },
+          { label: '7-Day Streak',  value: `${streak}d 🔥`, icon: <Flame size={22} />, color: 'bg-orange-100 text-orange-700', border: 'border-orange-200' },
         ].map((s, i) => (
-          <div key={i} className={`card flex items-center space-x-4 border-b-4 hover:border-b-4 ${s.border}`}>
+          <div key={i} className={`bg-card rounded-2xl shadow-sm border border-border p-4 flex items-center space-x-4 border-b-4 hover:border-b-[4px] ${s.border} transition-all`}>
             <div className={`p-3.5 rounded-2xl ${s.color}`}>{s.icon}</div>
             <div>
-              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">{s.label}</p>
-              <p className="text-2xl font-bold text-slate-800 mt-0.5">{s.value}</p>
+              <p className="text-muted text-xs font-bold uppercase tracking-wider">{s.label}</p>
+              <p className="text-2xl font-bold text-foreground mt-0.5">{s.value}</p>
             </div>
           </div>
         ))}
@@ -199,18 +199,18 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8">
         
         {/* Today's schedule */}
-        <motion.div variants={itemVariants} className="xl:col-span-2 card p-0 overflow-hidden flex flex-col h-full">
-          <div className="p-6 md:p-8 border-b border-slate-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <motion.div variants={itemVariants} className="xl:col-span-2 bg-card rounded-3xl shadow-card border border-border overflow-hidden flex flex-col h-full">
+          <div className="p-6 md:p-8 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-slate-800">Today&apos;s Schedule</h2>
-              <p className="text-sm text-slate-500 mt-1">Stay on top of your regimen</p>
+              <h2 className="text-2xl font-bold text-foreground">Today&apos;s Schedule</h2>
+              <p className="text-sm text-muted mt-1">Stay on top of your regimen</p>
             </div>
-            <Link href="/dose-tracker" className="text-sm text-primary font-semibold hover:text-primary-dark transition-colors flex items-center bg-primary/5 px-4 py-2 rounded-xl">
+            <Link href="/dose-tracker" className="text-sm text-primary font-bold hover:text-primary-dark transition-colors flex items-center bg-secondary/20 px-4 py-2 rounded-2xl">
               Full tracker <ChevronRight size={16} className="ml-1" />
             </Link>
           </div>
 
-          <div className="p-6 md:p-8 flex-1 bg-slate-50/30">
+          <div className="p-6 md:p-8 flex-1 bg-background/50">
             {schedLoading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
@@ -218,14 +218,14 @@ export default function DashboardPage() {
                 ))}
               </div>
             ) : schedule.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center py-12 text-slate-400">
-                <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-                  <Pill size={40} className="text-slate-300" />
+              <div className="h-full flex flex-col items-center justify-center text-center py-12 text-muted">
+                <div className="w-20 h-20 bg-border rounded-full flex items-center justify-center mb-4">
+                  <Pill size={40} className="text-muted/50" />
                 </div>
-                <p className="font-semibold text-slate-600 text-lg">No medications scheduled</p>
-                <p className="text-sm text-slate-400 max-w-xs mt-1 mb-6">Your schedule for today is completely clear.</p>
-                <Link href="/medications" className="btn-primary flex items-center">
-                  <Pill size={16} className="mr-2" /> Add Medication
+                <p className="font-bold text-foreground text-xl">No medications scheduled</p>
+                <p className="text-base text-muted max-w-xs mt-2 mb-6">Your schedule for today is completely clear.</p>
+                <Link href="/medications" className="btn-primary flex items-center py-2 px-6">
+                  <Pill size={18} className="mr-2" /> Add Medication
                 </Link>
               </div>
             ) : (
@@ -235,34 +235,34 @@ export default function DashboardPage() {
                     <motion.div 
                       key={dose._id}
                       initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                      className={`group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border transition-all hover:shadow-md ${STATUS_COLORS[dose.status] || 'bg-white/60 border-slate-200 hover:border-primary/30'}`}
+                      className={`group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border transition-all hover:shadow-md ${STATUS_COLORS[dose.status] || 'bg-card border-border hover:border-primary/30'}`}
                     >
                       <div className="flex items-start sm:items-center space-x-4 mb-4 sm:mb-0">
-                        <div className={`mt-1 sm:mt-0 w-3.5 h-3.5 rounded-full shrink-0 ${DOT_COLORS[dose.status] || 'bg-slate-400'}`} />
+                        <div className={`mt-1 sm:mt-0 w-3.5 h-3.5 rounded-full shrink-0 ${DOT_COLORS[dose.status] || 'bg-muted'}`} />
                         <div>
-                          <p className="font-bold text-slate-800 text-base">{dose.medicationName}</p>
-                          <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-slate-500 font-medium mt-1">
-                            <span className="flex items-center text-slate-700 bg-white/60 px-2 py-0.5 rounded-md"><Clock size={12} className="mr-1 text-primary" /> {dose.scheduledTime}</span>
+                          <p className="font-bold text-foreground text-lg">{dose.medicationName}</p>
+                          <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-sm text-muted font-medium mt-1">
+                            <span className="flex items-center text-foreground bg-background px-2.5 py-0.5 rounded-md border border-border shadow-sm"><Clock size={14} className="mr-1.5 text-primary" /> {dose.scheduledTime}</span>
                             <span>•</span>
                             <span>{dose.dosage}</span>
                             {dose.foodInstruction && (
                               <>
                                 <span>•</span>
-                                <span className="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">{dose.foodInstruction}</span>
+                                <span className="text-secondary-dark bg-secondary/20 px-2 py-0.5 rounded-md">{dose.foodInstruction}</span>
                               </>
                             )}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-3 pl-7 sm:pl-0">
-                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider ${PILL_COLORS[dose.status] || 'bg-slate-100 text-slate-600'}`}>
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider ${PILL_COLORS[dose.status] || 'bg-border text-muted'}`}>
                           {dose.status}
                         </span>
                         {['pending', 'overdue', 'upcoming'].includes(dose.status) && (
                           <button
                             onClick={() => logDose.mutate({ medicationId: dose.medicationId, status: 'taken', scheduledTime: dose.scheduledTime })}
                             disabled={logDose.isPending}
-                            className="bg-primary hover:bg-primary-dark text-white shadow-[0_4px_12px_rgba(108,99,255,0.25)] hover:shadow-[0_6px_16px_rgba(108,99,255,0.35)] text-sm font-semibold py-2 px-5 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                            className="bg-primary hover:bg-primary-dark text-white shadow-warm hover:shadow-elevated text-sm font-bold py-2.5 px-6 rounded-xl transition-all active:scale-95 disabled:opacity-50"
                           >
                             Take Now
                           </button>
@@ -272,7 +272,7 @@ export default function DashboardPage() {
                   ))}
                 </AnimatePresence>
                 {schedule.length > 6 && (
-                  <Link href="/dose-tracker" className="block w-full text-center py-3 text-sm font-semibold text-primary hover:text-primary-dark hover:bg-primary/5 rounded-xl transition-colors mt-2">
+                  <Link href="/dose-tracker" className="block w-full text-center py-4 text-base font-bold text-primary hover:text-primary-dark hover:bg-primary/5 rounded-2xl transition-colors mt-4 border border-transparent hover:border-primary/10">
                     View all {schedule.length} doses today
                   </Link>
                 )}
@@ -285,27 +285,27 @@ export default function DashboardPage() {
         <motion.div variants={itemVariants} className="space-y-6 md:space-y-8 flex flex-col h-full">
           
           {/* Weekly adherence */}
-          <div className="card">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-slate-800 text-lg">Weekly Adherence</h3>
-              <div className="p-2 bg-emerald-50 rounded-xl">
-                <TrendingUp size={20} className="text-emerald-500" />
+          <div className="bg-card rounded-3xl shadow-card border border-border p-6 md:p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="font-bold text-foreground text-xl">Weekly Adherence</h3>
+              <div className="p-2.5 bg-emerald-50 rounded-2xl border border-emerald-100">
+                <TrendingUp size={24} className="text-emerald-500" />
               </div>
             </div>
             
-            <div className="flex flex-col space-y-4">
+            <div className="flex flex-col space-y-5">
               <div className="flex items-end justify-between">
-                <div className="text-5xl font-black text-slate-800 tracking-tight">{weekAdh}<span className="text-2xl text-slate-400 font-bold ml-1">%</span></div>
+                <div className="text-5xl font-black text-foreground tracking-tight">{weekAdh}<span className="text-2xl text-muted font-bold ml-1">%</span></div>
                 <div className="text-right">
-                  <p className="text-sm font-bold text-slate-800">
+                  <p className="text-base font-bold text-foreground">
                     {weekAdh >= 80 ? 'Excellent' : weekAdh >= 50 ? 'Fair' : 'Needs Work'}
                   </p>
-                  <p className="text-xs text-slate-500 font-medium">Last 7 days</p>
+                  <p className="text-sm text-muted font-medium">Last 7 days</p>
                 </div>
               </div>
               
               <div className="pt-2">
-                <div className="h-3 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                <div className="h-4 bg-border rounded-full overflow-hidden shadow-inner">
                   <motion.div 
                     initial={{ width: 0 }}
                     animate={{ width: `${weekAdh}%` }}
@@ -319,10 +319,84 @@ export default function DashboardPage() {
             </div>
           </div>
 
-
+          {/* AI Risk Analysis */}
+          <AIRiskCard />
           
         </motion.div>
       </div>
     </motion.div>
+  );
+}
+
+function AIRiskCard() {
+  const { data: riskData, isLoading } = useQuery({
+    queryKey: ['ai-predict'],
+    queryFn: () => aiService.predict(),
+    refetchInterval: 300000, // 5 mins
+  });
+
+  const prediction = riskData?.data;
+  const level = prediction?.riskLevel || 'LOW';
+  
+  const colors: Record<string, string> = {
+    LOW: 'text-emerald-500 bg-emerald-50 border-emerald-100',
+    MEDIUM: 'text-amber-500 bg-amber-50 border-amber-100',
+    HIGH: 'text-orange-500 bg-orange-50 border-orange-100',
+    CRITICAL: 'text-red-500 bg-red-50 border-red-100',
+  };
+
+  return (
+    <div className="bg-card rounded-3xl shadow-card border border-border p-6 md:p-8 relative overflow-hidden">
+      <div className="absolute top-0 right-0 p-4 opacity-10">
+        <Activity size={80} className="text-primary" />
+      </div>
+
+      <div className="flex items-center space-x-2 mb-6">
+        <div className="p-2 bg-primary/10 rounded-xl">
+          <Activity size={20} className="text-primary" />
+        </div>
+        <h3 className="font-bold text-foreground text-xl">AI Risk Analysis</h3>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">
+          <div className="h-6 w-1/3 bg-border animate-pulse rounded-md" />
+          <div className="h-20 w-full bg-border animate-pulse rounded-xl" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-muted uppercase tracking-wider">Miss Risk Level</span>
+            <span className={`text-xs font-black px-3 py-1 rounded-full border ${colors[level] || colors.LOW}`}>
+              {level}
+            </span>
+          </div>
+
+          <div className="bg-background/50 rounded-2xl p-4 border border-border">
+            <p className="text-foreground font-semibold text-sm leading-relaxed">
+              {prediction?.recommendation || "Maintain your routine for optimal health."}
+            </p>
+          </div>
+
+          {prediction?.riskFactors?.length > 0 && (
+            <div className="pt-2">
+              <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-2">Key Factors</p>
+              <div className="flex flex-wrap gap-2">
+                {prediction.riskFactors.map((f: string, i: number) => (
+                  <span key={i} className="text-[11px] font-medium bg-muted/30 text-muted-foreground px-2 py-0.5 rounded-md">
+                    • {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <div className="flex items-center justify-between pt-2 border-t border-border mt-4">
+            <span className="text-[10px] text-muted font-bold uppercase tracking-tighter">Powered by MediSaathi ML</span>
+            <span className="text-[10px] text-primary font-black uppercase tracking-tighter">v1.2 Active</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

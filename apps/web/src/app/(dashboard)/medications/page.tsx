@@ -18,7 +18,7 @@ const FOOD_LABELS: Record<string, string> = {
 };
 const MED_TYPES = ['tablet', 'capsule', 'syrup', 'injection', 'drops', 'inhaler', 'patch', 'cream', 'other'];
 const COLOR_PILL: Record<string, string> = {
-  active: 'bg-emerald-100 text-emerald-700', inactive: 'bg-slate-100 text-slate-500',
+  active: 'bg-emerald-100 text-emerald-700', inactive: 'bg-border text-muted',
 };
 
 const defaultForm = {
@@ -107,79 +107,79 @@ export default function MedicationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">My Medications</h1>
-          <p className="text-slate-500 text-sm mt-1">{medications.length} medication{medications.length !== 1 ? 's' : ''} {showInactive ? 'total' : 'active'}</p>
+          <h1 className="text-3xl font-bold text-foreground">My Medications</h1>
+          <p className="text-muted text-base mt-1">{medications.length} medication{medications.length !== 1 ? 's' : ''} {showInactive ? 'total' : 'active'}</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <label className="flex items-center space-x-2 cursor-pointer text-sm text-slate-600">
+        <div className="flex items-center space-x-4">
+          <label className="flex items-center space-x-2 cursor-pointer text-sm text-foreground font-medium">
             <input type="checkbox" className="hidden" checked={showInactive} onChange={e => setShowInactive(e.target.checked)} />
-            <div className={`w-10 h-5.5 rounded-full relative transition-colors ${showInactive ? 'bg-indigo-600' : 'bg-slate-300'}`}>
-              <div className={`absolute top-0.5 left-0.5 w-4.5 h-4.5 bg-white rounded-full shadow transition-transform ${showInactive ? 'translate-x-4.5' : ''}`} />
+            <div className={`w-12 h-6 rounded-full relative transition-colors ${showInactive ? 'bg-primary' : 'bg-border border border-border'}`}>
+              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${showInactive ? 'translate-x-6' : ''}`} />
             </div>
             <span>Show inactive</span>
           </label>
-          <button id="add-medication-btn" onClick={openAdd} className="btn-primary flex items-center space-x-2">
-            <Plus size={18} />
-            <span>Add Medication</span>
+          <button id="add-medication-btn" onClick={openAdd} className="btn-primary flex items-center space-x-2 shadow-warm rounded-2xl py-2.5 px-5">
+            <Plus size={20} />
+            <span className="font-bold">Add Medication</span>
           </button>
         </div>
       </div>
 
       {/* List */}
       {isLoading ? (
-        <div className="space-y-3">
-          {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-20 rounded-2xl" />)}
+        <div className="space-y-4">
+          {[...Array(4)].map((_, i) => <div key={i} className="skeleton h-24 rounded-3xl" />)}
         </div>
       ) : medications.length === 0 ? (
-        <div className="card text-center py-16">
-          <Pill size={48} className="mx-auto text-slate-300 mb-4" />
-          <h3 className="text-lg font-semibold text-slate-600">No medications yet</h3>
-          <p className="text-slate-400 text-sm mb-6">Add your first medication or scan a prescription</p>
-          <button onClick={openAdd} className="btn-primary mx-auto inline-flex items-center space-x-2">
-            <Plus size={16} /> <span>Add Medication</span>
+        <div className="bg-card rounded-3xl shadow-card border border-border text-center py-20">
+          <Pill size={56} className="mx-auto text-muted/40 mb-5" />
+          <h3 className="text-2xl font-bold text-foreground mb-2">No medications yet</h3>
+          <p className="text-muted text-base mb-8">Add your first medication or scan a prescription</p>
+          <button onClick={openAdd} className="btn-primary mx-auto inline-flex items-center space-x-2 px-6 py-3 text-lg rounded-2xl shadow-warm">
+            <Plus size={20} /> <span className="font-bold">Add Medication</span>
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {medications.map((med: any) => (
-            <div key={med._id} className={`card flex items-center justify-between transition-all ${!med.isActive ? 'opacity-60' : ''}`}>
-              <div className="flex items-center space-x-4">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-bold ${
-                  med.isActive ? 'gradient-primary text-white' : 'bg-slate-200 text-slate-400'}`}>
-                  <Pill size={22} />
+            <div key={med._id} className={`bg-card rounded-3xl shadow-sm border border-border p-5 flex items-center justify-between transition-all hover:shadow-card hover:border-primary/20 ${!med.isActive ? 'opacity-60 bg-background' : ''}`}>
+              <div className="flex items-center space-x-5">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl font-bold shadow-sm ${
+                  med.isActive ? 'gradient-primary text-white shadow-warm' : 'bg-border text-muted'}`}>
+                  <Pill size={26} />
                 </div>
                 <div>
-                  <div className="flex items-center space-x-2">
-                    <h3 className="font-bold text-slate-800">{med.name}</h3>
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${COLOR_PILL[med.isActive ? 'active' : 'inactive']}`}>
+                  <div className="flex items-center space-x-3 mb-1">
+                    <h3 className="font-bold text-foreground text-lg">{med.name}</h3>
+                    <span className={`text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider ${COLOR_PILL[med.isActive ? 'active' : 'inactive']}`}>
                       {med.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-500">{med.dosage} · {FREQ_LABELS[med.frequency] || med.frequency}</p>
-                  <div className="flex items-center space-x-3 mt-1">
+                  <p className="text-base text-muted font-medium">{med.dosage} · {FREQ_LABELS[med.frequency] || med.frequency}</p>
+                  <div className="flex items-center space-x-3 mt-1.5">
                     {med.scheduledTimes?.map((t: string, i: number) => (
-                      <span key={i} className="flex items-center text-xs text-slate-400">
-                        <Clock size={11} className="mr-1" />{t}
+                      <span key={i} className="flex items-center text-sm text-foreground bg-background px-2 py-0.5 rounded-md border border-border">
+                        <Clock size={14} className="mr-1.5 text-primary" />{t}
                       </span>
                     ))}
-                    <span className="text-xs text-slate-400">{FOOD_LABELS[med.foodInstruction] || med.foodInstruction}</span>
+                    <span className="text-sm text-secondary-dark bg-secondary/20 px-2 py-0.5 rounded-md font-medium">{FOOD_LABELS[med.foodInstruction] || med.foodInstruction}</span>
                   </div>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
                 {med.totalQuantity && (
-                  <span className="text-xs text-slate-500 mr-2">Stock: {med.currentQuantity ?? '—'}</span>
+                  <span className="text-sm font-semibold text-muted mr-3 bg-background px-3 py-1 rounded-lg border border-border">Stock: {med.currentQuantity ?? '—'}</span>
                 )}
                 <button onClick={() => toggleActive.mutate({ id: med._id, active: !med.isActive })}
-                  className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 transition-colors" title="Toggle active">
-                  {med.isActive ? <ToggleRight size={20} className="text-indigo-600" /> : <ToggleLeft size={20} />}
+                  className="p-2.5 rounded-xl hover:bg-secondary/10 text-muted transition-colors" title="Toggle active">
+                  {med.isActive ? <ToggleRight size={24} className="text-primary" /> : <ToggleLeft size={24} />}
                 </button>
-                <button onClick={() => openEdit(med)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-indigo-600 transition-colors">
-                  <Edit2 size={16} />
+                <button onClick={() => openEdit(med)} className="p-2.5 rounded-xl hover:bg-secondary/10 text-muted hover:text-primary transition-colors">
+                  <Edit2 size={20} />
                 </button>
                 <button onClick={() => { if (confirm(`Remove ${med.name}?`)) deleteMutation.mutate(med._id); }}
-                  className="p-2 rounded-lg hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors">
-                  <Trash2 size={16} />
+                  className="p-2.5 rounded-xl hover:bg-red-50 text-muted hover:text-red-500 transition-colors">
+                  <Trash2 size={20} />
                 </button>
               </div>
             </div>
@@ -190,59 +190,59 @@ export default function MedicationsPage() {
       {/* Modal */}
       {showModal && (
         <>
-          <div className="modal-backdrop" onClick={() => setShowModal(false)} />
-          <div className="modal-content">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100">
-              <h2 className="text-xl font-bold text-slate-800">{editing ? 'Edit Medication' : 'Add Medication'}</h2>
-              <button onClick={() => setShowModal(false)} className="p-2 hover:bg-slate-100 rounded-lg text-slate-400">
-                <X size={20} />
+          <div className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50 transition-opacity" onClick={() => setShowModal(false)} />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-card rounded-[2rem] shadow-2xl z-50 overflow-hidden max-h-[90vh] overflow-y-auto border border-border">
+            <div className="flex items-center justify-between p-6 sm:p-8 border-b border-border bg-background/50">
+              <h2 className="text-2xl font-bold text-foreground">{editing ? 'Edit Medication' : 'Add Medication'}</h2>
+              <button onClick={() => setShowModal(false)} className="p-2.5 hover:bg-border rounded-xl text-muted transition-colors">
+                <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-6">
+              <div className="grid grid-cols-2 gap-5">
                 <div className="col-span-2">
-                  <label className="label">Medication Name *</label>
-                  <input id="med-name" className="input" placeholder="e.g. Metformin" value={form.name} onChange={e => upF('name', e.target.value)} />
+                  <label className="label text-foreground font-semibold mb-1.5 block">Medication Name *</label>
+                  <input id="med-name" className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="e.g. Metformin" value={form.name} onChange={e => upF('name', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">Generic Name</label>
-                  <input className="input" placeholder="e.g. Metformin HCl" value={form.genericName} onChange={e => upF('genericName', e.target.value)} />
+                  <label className="label text-foreground font-semibold mb-1.5 block">Generic Name</label>
+                  <input className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="e.g. Metformin HCl" value={form.genericName} onChange={e => upF('genericName', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">Type</label>
-                  <select className="input" value={form.type} onChange={e => upF('type', e.target.value)}>
+                  <label className="label text-foreground font-semibold mb-1.5 block">Type</label>
+                  <select className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" value={form.type} onChange={e => upF('type', e.target.value)}>
                     {MED_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="label">Dosage *</label>
-                  <input className="input" placeholder="e.g. 500mg" value={form.dosage} onChange={e => upF('dosage', e.target.value)} />
+                  <label className="label text-foreground font-semibold mb-1.5 block">Dosage *</label>
+                  <input className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="e.g. 500mg" value={form.dosage} onChange={e => upF('dosage', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">Frequency</label>
-                  <select className="input" value={form.frequency} onChange={e => upF('frequency', e.target.value)}>
+                  <label className="label text-foreground font-semibold mb-1.5 block">Frequency</label>
+                  <select className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" value={form.frequency} onChange={e => upF('frequency', e.target.value)}>
                     {FREQUENCIES.map(f => <option key={f} value={f}>{FREQ_LABELS[f]}</option>)}
                   </select>
                 </div>
               </div>
 
               {/* Scheduled times */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="label mb-0">Scheduled Times</label>
-                  <button type="button" onClick={addTime} className="text-xs text-indigo-600 font-medium hover:underline flex items-center">
-                    <Plus size={12} className="mr-1" /> Add time
+              <div className="bg-secondary/10 p-5 rounded-3xl border border-secondary/30">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="label text-foreground font-bold mb-0 block">Scheduled Times</label>
+                  <button type="button" onClick={addTime} className="text-sm text-primary font-bold hover:text-primary-dark transition-colors flex items-center bg-white px-3 py-1.5 rounded-xl border border-primary/20 shadow-sm">
+                    <Plus size={16} className="mr-1.5" /> Add time
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-3">
                   {form.scheduledTimes.map((t, i) => (
-                    <div key={i} className="flex items-center space-x-1 bg-indigo-50 rounded-lg px-2 py-1">
-                      <Clock size={14} className="text-indigo-500" />
-                      <input type="time" className="bg-transparent text-sm text-indigo-700 font-medium outline-none w-24"
+                    <div key={i} className="flex items-center space-x-2 bg-card rounded-2xl px-3 py-2 border border-border shadow-sm">
+                      <Clock size={16} className="text-primary" />
+                      <input type="time" className="bg-transparent text-base text-foreground font-bold outline-none w-24"
                         value={t} onChange={e => updateTime(i, e.target.value)} />
                       {form.scheduledTimes.length > 1 && (
-                        <button type="button" onClick={() => removeTime(i)} className="text-slate-400 hover:text-red-500">
-                          <X size={12} />
+                        <button type="button" onClick={() => removeTime(i)} className="text-muted hover:text-red-500 p-1 rounded-lg hover:bg-red-50 transition-colors">
+                          <X size={16} />
                         </button>
                       )}
                     </div>
@@ -251,40 +251,40 @@ export default function MedicationsPage() {
               </div>
 
               <div>
-                <label className="label">Food Instruction</label>
-                <select className="input" value={form.foodInstruction} onChange={e => upF('foodInstruction', e.target.value)}>
+                <label className="label text-foreground font-semibold mb-1.5 block">Food Instruction</label>
+                <select className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" value={form.foodInstruction} onChange={e => upF('foodInstruction', e.target.value)}>
                   {FOOD_OPTIONS.map(o => <option key={o} value={o}>{FOOD_LABELS[o]}</option>)}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-5">
                 <div>
-                  <label className="label">Start Date</label>
-                  <input type="date" className="input" value={form.startDate} onChange={e => upF('startDate', e.target.value)} />
+                  <label className="label text-foreground font-semibold mb-1.5 block">Start Date</label>
+                  <input type="date" className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" value={form.startDate} onChange={e => upF('startDate', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">End Date (optional)</label>
-                  <input type="date" className="input" value={form.endDate} onChange={e => upF('endDate', e.target.value)} />
+                  <label className="label text-foreground font-semibold mb-1.5 block">End Date (optional)</label>
+                  <input type="date" className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" value={form.endDate} onChange={e => upF('endDate', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">Total Quantity</label>
-                  <input type="number" className="input" placeholder="e.g. 30" value={form.totalQuantity} onChange={e => upF('totalQuantity', e.target.value)} />
+                  <label className="label text-foreground font-semibold mb-1.5 block">Total Quantity</label>
+                  <input type="number" className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="e.g. 30" value={form.totalQuantity} onChange={e => upF('totalQuantity', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label">Refill Alert At</label>
-                  <input type="number" className="input" placeholder="e.g. 5" value={form.refillAt} onChange={e => upF('refillAt', e.target.value)} />
+                  <label className="label text-foreground font-semibold mb-1.5 block">Refill Alert At</label>
+                  <input type="number" className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="e.g. 5" value={form.refillAt} onChange={e => upF('refillAt', e.target.value)} />
                 </div>
               </div>
 
               <div>
-                <label className="label">Notes</label>
-                <textarea className="input resize-none h-20" placeholder="Any special instructions..." value={form.notes} onChange={e => upF('notes', e.target.value)} />
+                <label className="label text-foreground font-semibold mb-1.5 block">Notes</label>
+                <textarea className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3 resize-none h-24" placeholder="Any special instructions..." value={form.notes} onChange={e => upF('notes', e.target.value)} />
               </div>
 
-              <div className="flex space-x-3 pt-2">
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">Cancel</button>
-                <button id="save-medication-btn" type="submit" disabled={saveMutation.isPending} className="btn-primary flex-1 flex items-center justify-center">
-                  {saveMutation.isPending ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : (editing ? 'Save Changes' : 'Add Medication')}
+              <div className="flex space-x-4 pt-4 border-t border-border mt-8">
+                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1 py-3.5 rounded-2xl text-lg font-bold bg-background hover:bg-border transition-colors border border-border">Cancel</button>
+                <button id="save-medication-btn" type="submit" disabled={saveMutation.isPending} className="btn-primary flex-[2] flex items-center justify-center py-3.5 rounded-2xl text-lg shadow-warm hover:shadow-elevated transition-all">
+                  {saveMutation.isPending ? <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" /> : (editing ? 'Save Changes' : 'Add Medication')}
                 </button>
               </div>
             </form>

@@ -19,15 +19,28 @@ export async function POST(req: NextRequest) {
     }
 
     const patient = await User.findById(patientId);
-    if (!patient || !patient.phone) {
-      return NextResponse.json({ error: 'Patient or phone not found' }, { status: 404 });
+    if (!patient) {
+      return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
+    }
+
+    // Try to find primary emergency contact, fallback to first one, then to patient's own phone
+    const primaryContact = patient.emergencyContacts?.find((c: any) => c.isPrimary) || patient.emergencyContacts?.[0];
+    const targetPhone = primaryContact?.phone || patient.phone;
+
+    if (!targetPhone) {
+      return NextResponse.json({ error: 'No contact phone number found for escalation' }, { status: 404 });
     }
 
     let call;
     try {
+      // Use emergency contact name in the message if possible
+      const escalationMessage = primaryContact 
+        ? `Alert for emergency contact ${primaryContact.name}: ${message}`
+        : message;
+
       call = await twilioClient.calls.create({
-        twiml: `<Response><Say>${message}</Say></Response>`,
-        to: patient.phone,
+        twiml: `<Response><Say voice="alice">${escalationMessage}</Say></Response>`,
+        to: targetPhone,
         from: process.env.TWILIO_PHONE_NUMBER || '+1234567890'
       });
     } catch (err: any) {

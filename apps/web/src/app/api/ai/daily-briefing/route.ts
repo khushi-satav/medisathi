@@ -37,14 +37,30 @@ export async function POST(req: NextRequest) {
       status: d.status,
     }));
 
+    // --- MODIFICATION: Fetch Risk Level for Briefing ---
+    let riskInfo = "Risk: Low";
+    try {
+      const mlApiUrl = process.env.ML_API_URL || 'http://localhost:8000';
+      const riskRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/ai/predict`, {
+        headers: { 'Cookie': req.headers.get('cookie') || '' } // Pass cookies for auth if needed
+      });
+      if (riskRes.ok) {
+        const riskData = await riskRes.json();
+        riskInfo = `Risk: ${riskData.riskLevel}. Recommendation: ${riskData.recommendation}`;
+      }
+    } catch (err) {
+      console.error('Risk fetch for briefing failed:', err);
+    }
+
     const prompt = `Generate a brief, encouraging daily medication briefing for this patient:
 - Name: ${user.name}
 - Today's doses: ${JSON.stringify(dosesSummary)}
 - Today's adherence: ${stats?.adherenceRate ?? 'N/A'}%
 - Missed doses in last 7 days: ${recentMissed.length}
+- ML Health Prediction: ${riskInfo}
 
 Keep it under 80 words. Use simple, warm language. 
-If adherence is low, be motivating not alarming.
+If adherence is low or risk is HIGH, be motivating but firm about safety.
 Include: what to take next, timing reminder, one encouragement line.`;
 
     const briefing = await generateText(prompt);

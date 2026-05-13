@@ -90,6 +90,9 @@ export const aiService = {
 
   // Get personalized daily medication briefing
   getDailyBriefing: () => api.post('/ai/daily-briefing', {}),
+
+  // Get adherence prediction risk (ML powered)
+  predict: () => api.get('/ai/predict'),
 };
 
 export default api;

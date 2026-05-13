@@ -130,7 +130,9 @@ async function seed() {
           { name: 'Hypertension', icdCode: 'I10' },
         ],
         caregiverLinks: [],
-        emergencyContacts: [],
+        emergencyContacts: [
+          { name: 'Anil Kumar', phone: '+919999999999', relationship: 'Son', isPrimary: true }
+        ],
       },
     },
     { upsert: true, new: true, setDefaultsOnInsert: true }
