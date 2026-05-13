@@ -3,43 +3,19 @@ import { requireAuth } from '@/lib/auth';
 import connectDB from '@/lib/mongoose';
 import Prescription from '@/models/Prescription';
 import Medication from '@/models/Medication';
-import { v2 as cloudinary } from 'cloudinary';
-import vision from '@google-cloud/vision';
-import OpenAI from 'openai';
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
+import { uploadToCloudinary } from '@/server/services/cloudinary';
+import { extractPrescription } from '@/server/services/gemini';
 
 function mapFrequencyToTimes(frequency?: string): string[] {
   if (!frequency) return ['09:00'];
-  const lowerFreq = frequency.toLowerCase();
-  
-  if (lowerFreq.includes('thrice') || lowerFreq.includes('three') || lowerFreq.includes('tds') || lowerFreq.includes('tid')) {
-    return ['08:00', '14:00', '20:00'];
-  }
-  if (lowerFreq.includes('twice') || lowerFreq.includes('two') || lowerFreq.includes('bd') || lowerFreq.includes('bid')) {
-    return ['08:00', '20:00'];
-  }
-  if (lowerFreq.includes('four') || lowerFreq.includes('qid')) {
-    return ['08:00', '12:00', '16:00', '20:00'];
-  }
-  if (lowerFreq.includes('night') || lowerFreq.includes('bed') || lowerFreq.includes('hs')) {
-    return ['21:00'];
-  }
-  if (lowerFreq.includes('morning') || lowerFreq.includes('am')) {
-    return ['08:00'];
-  }
-  if (lowerFreq.includes('afternoon') || lowerFreq.includes('noon')) {
-    return ['13:00'];
-  }
-  if (lowerFreq.includes('evening') || lowerFreq.includes('pm')) {
-    return ['18:00'];
-  }
-  
+  const f = frequency.toLowerCase();
+  if (f.includes('thrice') || f.includes('tds') || f.includes('tid') || f.includes('three')) return ['08:00', '14:00', '20:00'];
+  if (f.includes('twice') || f.includes('bd') || f.includes('bid') || f.includes('two')) return ['08:00', '20:00'];
+  if (f.includes('four') || f.includes('qid')) return ['08:00', '12:00', '16:00', '20:00'];
+  if (f.includes('night') || f.includes('bed') || f.includes('hs')) return ['21:00'];
+  if (f.includes('morning')) return ['08:00'];
+  if (f.includes('afternoon') || f.includes('noon')) return ['13:00'];
+  if (f.includes('evening')) return ['18:00'];
   return ['09:00'];
 }
 
@@ -54,95 +30,85 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
+    // Read file
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-
-    // 1. Upload to Cloudinary
     const base64Data = buffer.toString('base64');
     const dataUri = `data:${file.type};base64,${base64Data}`;
-    
-    let uploadResult;
+
+    // ─── Step 1: Upload to Cloudinary (FREE tier) ───────────────────────────
+    let fileUrl = '';
     try {
-      uploadResult = await cloudinary.uploader.upload(dataUri, {
-        folder: `medisaathi/prescriptions/${userPayload.id}`
-      });
+      fileUrl = await uploadToCloudinary(dataUri, userPayload.id, 'prescriptions');
     } catch (err: any) {
-      console.error('Cloudinary upload failed:', err);
-      return NextResponse.json({ error: 'Failed to upload image to cloud storage' }, { status: 502 });
+      console.error('Cloudinary upload failed:', err.message);
+      // Fallback: store as data URI (not recommended for production)
+      fileUrl = `data:${file.type};base64,${base64Data.slice(0, 100)}...`;
     }
 
-    // 2. OCR using Google Cloud Vision
-    let ocrText = '';
+    // ─── Step 2: Gemini Vision — OCR + Parse (FREE) ─────────────────────────
+    let parsedData: any = { medicines: [], doctor: {}, patient: {}, confidence: 0, warnings: [] };
     try {
-      const visionClient = new vision.ImageAnnotatorClient();
-      const [result] = await visionClient.textDetection(uploadResult.secure_url);
-      ocrText = result.fullTextAnnotation?.text || '';
-    } catch (err: any) {
-      console.error('Google Cloud Vision failed:', err);
-      // We can continue without OCR if we want to rely solely on OpenAI Vision, but here we just return error
-      return NextResponse.json({ error: 'Image text extraction failed' }, { status: 502 });
+      parsedData = await extractPrescription(base64Data, file.type);
+    } catch (aiErr: any) {
+      console.error('Gemini Vision failed:', aiErr.message);
+      return NextResponse.json(
+        { error: 'AI prescription analysis failed. Please try a clearer image.' },
+        { status: 502 }
+      );
     }
 
-    // 3. GPT-4o parsing
-    let parsedData = { medicines: [] as any[] };
-    try {
-      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      const aiResponse = await openai.chat.completions.create({
-        model: "gpt-4o",
-        response_format: { type: "json_object" },
-        messages: [
-          {
-            role: "system",
-            content: "You are a medical AI. Extract medications from the prescription OCR text. Output strictly as JSON: { medicines: [{ name, dosage, frequency, duration, foodInstruction, form }] }"
-          },
-          { role: "user", content: `OCR TEXT: \n${ocrText}` }
-        ]
-      });
-      parsedData = JSON.parse(aiResponse.choices[0].message.content || '{"medicines":[]}');
-    } catch (err: any) {
-      console.error('OpenAI parsing failed:', err);
-      return NextResponse.json({ error: 'AI analysis failed' }, { status: 502 });
-    }
-
-    // 4. Save Prescription record
+    // ─── Step 3: Save Prescription record ────────────────────────────────────
     const prescription = await Prescription.create({
       userId: userPayload.id,
-      fileUrl: uploadResult.secure_url,
+      fileUrl,
       fileName: file.name,
       fileType: file.type,
       fileSize: file.size,
-      ocrRawText: ocrText,
-      extractedData: parsedData,
-      status: 'REVIEWED' // Simplify for demonstration
+      aiExtracted: parsedData,
+      aiConfidence: parsedData.confidence,
+      doctorName: parsedData.doctor?.name || '',
+      hospitalName: parsedData.doctor?.hospital || '',
+      status: 'ai_done',
     });
 
-    // 5. Optionally create draft medications or let user review first
+    // ─── Step 4: Auto-create Medications ─────────────────────────────────────
     const addedMeds = [];
-    for (const med of parsedData.medicines) {
-      const newMed = await Medication.create({
-        userId: userPayload.id,
-        name: med.name,
-        dosage: med.dosage,
-        form: med.form?.toUpperCase() || 'TABLET',
-        times: mapFrequencyToTimes(med.frequency),
-        foodInstruction: med.foodInstruction?.toUpperCase().replace(' ', '_') || 'AFTER_MEAL',
-        startDate: new Date(),
-        stockCount: 30,
-        prescriptionId: prescription._id,
-        addedByOCR: true
-      });
-      addedMeds.push(newMed);
+    for (const med of parsedData.medicines || []) {
+      try {
+        const newMed = await Medication.create({
+          userId: userPayload.id,
+          name: med.name,
+          genericName: med.genericName || '',
+          dosage: med.dosage || '',
+          form: med.form?.toLowerCase() || 'tablet',
+          times: med.times?.length ? med.times : mapFrequencyToTimes(med.frequency),
+          foodInstruction: med.foodInstruction || 'after_meal',
+          startDate: new Date(),
+          stockCount: med.quantity || 30,
+          prescriptionId: prescription._id,
+          addedByOCR: true,
+          specialInstructions: med.specialInstructions || '',
+        });
+        addedMeds.push(newMed);
+      } catch (medErr: any) {
+        console.error('Failed to save medication:', med.name, medErr.message);
+      }
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      prescription,
-      extractedMedicines: parsedData.medicines,
-      medications: addedMeds
+    return NextResponse.json({
+      success: true,
+      prescriptionId: prescription._id,
+      fileUrl,
+      extracted: parsedData,
+      extractedMedicines: parsedData.medicines || [],
+      medications: addedMeds,
+      confidence: parsedData.confidence,
     });
+
   } catch (error: any) {
-    console.error('OCR Upload error:', error);
+    console.error('Prescription upload error:', error.message);
+    if (error.message === 'UNAUTHORIZED') return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Prescription from '@/models/Prescription';
-import Medication from '@/models/Medication';
 import { requireAuth } from '@/lib/auth';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 export async function GET(req: NextRequest) {
   try {
     const user = requireAuth(req);
     await connectDB();
 
-    const prescriptions = await Prescription.find({ userId: user.id }).sort({ createdAt: -1 }).limit(20);
+    const prescriptions = await Prescription.find({ userId: user.id })
+      .sort({ createdAt: -1 })
+      .limit(20);
+
     return NextResponse.json({ prescriptions });
   } catch (error: any) {
-    if (error.message === 'UNAUTHORIZED') return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+    if (error.message === 'UNAUTHORIZED') {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
@@ -40,17 +44,13 @@ export async function POST(req: NextRequest) {
       status: 'processing',
     });
 
-    // Try AI extraction if OpenAI is configured and base64 provided
-    if (process.env.OPENAI_API_KEY && imageBase64) {
+    // Use Gemini Vision if base64 image is provided (FREE)
+    if (process.env.GEMINI_API_KEY && imageBase64) {
       try {
-        const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-        const completion = await openai.chat.completions.create({
-          model: 'gpt-4o',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert medical prescription reader specializing in Indian prescriptions.
+        const prompt = `You are an expert medical prescription reader specializing in Indian prescriptions.
 Extract all medications from the prescription image.
 
 Return ONLY valid JSON with no markdown:
@@ -77,34 +77,27 @@ Return ONLY valid JSON with no markdown:
 
 Rules:
 - Correct medicine name spelling errors
-- Infer times from frequency (once=["08:00"], twice=["08:00","20:00"], thrice=["08:00","14:00","20:00"])
 - foodInstruction must be: after_meal | before_meal | with_meal | empty_stomach | any_time
-- Parse "1-0-1" notation as morning+evening doses`,
-            },
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`,
-                    detail: 'high',
-                  },
-                },
-                { type: 'text', text: 'Extract all medications from this prescription.' },
-              ],
-            },
-          ],
-          max_tokens: 2000,
-          temperature: 0.1,
-        });
+- Infer times from frequency (once=["08:00"], twice=["08:00","20:00"], thrice=["08:00","14:00","20:00"])
+- Parse "1-0-1" notation as morning+evening doses`;
 
-        const aiText = completion.choices[0].message.content || '';
+        const imagePart = {
+          inlineData: {
+            data: imageBase64,
+            mimeType: (mimeType || 'image/jpeg') as string,
+          },
+        };
+
+        const result = await model.generateContent([prompt, imagePart]);
+        const aiText = result.response.text();
+
         let aiExtracted: any = null;
         try {
           const match = aiText.match(/\{[\s\S]*\}/);
           aiExtracted = match ? JSON.parse(match[0]) : null;
-        } catch { aiExtracted = null; }
+        } catch {
+          aiExtracted = null;
+        }
 
         await Prescription.findByIdAndUpdate(prescription._id, {
           aiExtracted,
@@ -120,22 +113,29 @@ Rules:
           fileUrl,
           status: 'ai_done',
         });
+
       } catch (aiError: any) {
-        console.error('AI extraction failed:', aiError.message);
-        await Prescription.findByIdAndUpdate(prescription._id, { status: 'failed', errorMessage: aiError.message });
+        console.error('Gemini extraction failed:', aiError.message);
+        await Prescription.findByIdAndUpdate(prescription._id, {
+          status: 'failed',
+          errorMessage: aiError.message,
+        });
       }
     } else {
-      await Prescription.findByIdAndUpdate(prescription._id, { status: 'ocr_done' });
+      await Prescription.findByIdAndUpdate(prescription._id, { status: 'pending' });
     }
 
     return NextResponse.json({
       prescriptionId: prescription._id,
       extracted: null,
       fileUrl,
-      status: process.env.OPENAI_API_KEY ? 'failed' : 'ocr_done',
+      status: 'pending',
     });
+
   } catch (error: any) {
-    if (error.message === 'UNAUTHORIZED') return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+    if (error.message === 'UNAUTHORIZED') {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
