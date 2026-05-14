@@ -1,0 +1,134 @@
+name,generic_name,category
+Paracetamol,Acetaminophen,Analgesic
+Dolo 650,Paracetamol,Analgesic
+Crocin,Paracetamol,Analgesic
+Calpol,Paracetamol,Analgesic
+Azithromycin,Azithromycin,Antibiotic
+Augmentin,Amoxicillin+Clavulanate,Antibiotic
+Amoxicillin,Amoxicillin,Antibiotic
+Ciprofloxacin,Ciprofloxacin,Antibiotic
+Cefixime,Cefixime,Antibiotic
+Ofloxacin,Ofloxacin,Antibiotic
+Levofloxacin,Levofloxacin,Antibiotic
+Metronidazole,Metronidazole,Antibiotic
+Doxycycline,Doxycycline,Antibiotic
+Norfloxacin,Norfloxacin,Antibiotic
+Metformin,Metformin,Antidiabetic
+Glimepiride,Glimepiride,Antidiabetic
+Gliclazide,Gliclazide,Antidiabetic
+Glipizide,Glipizide,Antidiabetic
+Voglibose,Voglibose,Antidiabetic
+Sitagliptin,Sitagliptin,Antidiabetic
+Pioglitazone,Pioglitazone,Antidiabetic
+Teneligliptin,Teneligliptin,Antidiabetic
+Amlodipine,Amlodipine,Antihypertensive
+Telmisartan,Telmisartan,Antihypertensive
+Losartan,Losartan,Antihypertensive
+Ramipril,Ramipril,Antihypertensive
+Enalapril,Enalapril,Antihypertensive
+Atenolol,Atenolol,Antihypertensive
+Metoprolol,Metoprolol,Antihypertensive
+Nebivolol,Nebivolol,Antihypertensive
+Cilnidipine,Cilnidipine,Antihypertensive
+Olmesartan,Olmesartan,Antihypertensive
+Hydrochlorothiazide,Hydrochlorothiazide,Diuretic
+Furosemide,Furosemide,Diuretic
+Spironolactone,Spironolactone,Diuretic
+Pantoprazole,Pantoprazole,Antacid
+Omeprazole,Omeprazole,Antacid
+Rabeprazole,Rabeprazole,Antacid
+Esomeprazole,Esomeprazole,Antacid
+Lansoprazole,Lansoprazole,Antacid
+Domperidone,Domperidone,Prokinetic
+Ondansetron,Ondansetron,Antiemetic
+Ranitidine,Ranitidine,Antacid
+Famotidine,Famotidine,Antacid
+Sucralfate,Sucralfate,Antacid
+Atorvastatin,Atorvastatin,Statin
+Rosuvastatin,Rosuvastatin,Statin
+Pravastatin,Pravastatin,Statin
+Fenofibrate,Fenofibrate,Lipid-lowering
+Aspirin,Aspirin,Antiplatelet
+Clopidogrel,Clopidogrel,Antiplatelet
+Ecosprin,Aspirin,Antiplatelet
+Warfarin,Warfarin,Anticoagulant
+Rivaroxaban,Rivaroxaban,Anticoagulant
+Cetirizine,Cetirizine,Antihistamine
+Levocetirizine,Levocetirizine,Antihistamine
+Fexofenadine,Fexofenadine,Antihistamine
+Loratadine,Loratadine,Antihistamine
+Montelukast,Montelukast,Antiasthmatic
+Deriphyllin,Theophylline+Etophylline,Antiasthmatic
+Salbutamol,Salbutamol,Bronchodilator
+Budesonide,Budesonide,Corticosteroid
+Fluticasone,Fluticasone,Corticosteroid
+Prednisolone,Prednisolone,Corticosteroid
+Methylprednisolone,Methylprednisolone,Corticosteroid
+Deflazacort,Deflazacort,Corticosteroid
+Dexamethasone,Dexamethasone,Corticosteroid
+Betamethasone,Betamethasone,Corticosteroid
+Diclofenac,Diclofenac,NSAID
+Ibuprofen,Ibuprofen,NSAID
+Aceclofenac,Aceclofenac,NSAID
+Nimesulide,Nimesulide,NSAID
+Naproxen,Naproxen,NSAID
+Etoricoxib,Etoricoxib,NSAID
+Combiflam,Ibuprofen+Paracetamol,NSAID
+Tramadol,Tramadol,Analgesic
+Gabapentin,Gabapentin,Neuropathic
+Pregabalin,Pregabalin,Neuropathic
+Amitriptyline,Amitriptyline,Antidepressant
+Duloxetine,Duloxetine,Antidepressant
+Escitalopram,Escitalopram,Antidepressant
+Sertraline,Sertraline,Antidepressant
+Fluoxetine,Fluoxetine,Antidepressant
+Alprazolam,Alprazolam,Anxiolytic
+Clonazepam,Clonazepam,Anxiolytic
+Diazepam,Diazepam,Anxiolytic
+Zolpidem,Zolpidem,Sedative
+Levothyroxine,Levothyroxine,Thyroid
+Thyronorm,Levothyroxine,Thyroid
+Thyrox,Levothyroxine,Thyroid
+Calcium Carbonate,Calcium,Supplement
+Shelcal,Calcium+Vitamin D3,Supplement
+Calcitriol,Calcitriol,Supplement
+Cholecalciferol,Vitamin D3,Supplement
+Vitamin B12,Methylcobalamin,Supplement
+Methylcobalamin,Methylcobalamin,Supplement
+Mecobalamin,Methylcobalamin,Supplement
+Folic Acid,Folic Acid,Supplement
+Iron,Ferrous Sulphate,Supplement
+Multivitamin,Multivitamin,Supplement
+Zinc,Zinc,Supplement
+Becosules,B-Complex,Supplement
+Limcee,Vitamin C,Supplement
+Ivermectin,Ivermectin,Antiparasitic
+Albendazole,Albendazole,Antiparasitic
+Fluconazole,Fluconazole,Antifungal
+Clotrimazole,Clotrimazole,Antifungal
+Acyclovir,Acyclovir,Antiviral
+Oseltamivir,Oseltamivir,Antiviral
+Insulin Glargine,Insulin,Antidiabetic
+Insulin Aspart,Insulin,Antidiabetic
+Glycomet,Metformin,Antidiabetic
+Telma,Telmisartan,Antihypertensive
+Stamlo,Amlodipine,Antihypertensive
+Pan,Pantoprazole,Antacid
+Pan D,Pantoprazole+Domperidone,Antacid
+Rantac,Ranitidine,Antacid
+Gelusil,Antacid Combination,Antacid
+Digene,Antacid Combination,Antacid
+Enzoflam,Diclofenac+Serratiopeptidase,NSAID
+Voveran,Diclofenac,NSAID
+Brufen,Ibuprofen,NSAID
+Meftal Spas,Mefenamic Acid+Dicyclomine,Antispasmodic
+Drotin,Drotaverine,Antispasmodic
+Cyclopam,Dicyclomine,Antispasmodic
+Buscopan,Hyoscine,Antispasmodic
+Loperamide,Loperamide,Antidiarrheal
+ORS,Oral Rehydration Salts,Rehydration
+Normetrogyl,Norfloxacin+Metronidazole,Antibiotic
+Taxim O,Cefixime,Antibiotic
+Monocef,Ceftriaxone,Antibiotic
+Amikacin,Amikacin,Antibiotic
+Gentamicin,Gentamicin,Antibiotic

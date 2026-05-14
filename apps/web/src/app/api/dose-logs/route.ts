@@ -4,6 +4,7 @@ import DoseLog from '@/models/DoseLog';
 import Medication from '@/models/Medication';
 import AdherenceStats from '@/models/AdherenceStats';
 import { requireAuth } from '@/lib/auth';
+import { logDoseToML } from '@/lib/mlClient';
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
       { upsert: true, new: true }
     );
 
+<<<<<<< HEAD
     // --- MODIFICATION: Sync with ML API ---
     try {
       const mlApiUrl = process.env.ML_API_URL || 'http://localhost:8000';
@@ -94,6 +96,18 @@ export async function POST(req: NextRequest) {
         console.error('⚠️ Escalation trigger failed:', escErr);
       }
     }
+=======
+    // Fire-and-forget: send dose data to ML API for retraining
+    const scheduledDt = new Date(scheduledTime);
+    logDoseToML({
+      userId: user.id,
+      medicationId,
+      status,
+      scheduledTime,
+      hour: scheduledDt.getHours(),
+      dayOfWeek: scheduledDt.getDay(),
+    });
+>>>>>>> dd72bdc (Added OCR backend and medicine parser)
 
     return NextResponse.json({ log, stats });
   } catch (error: any) {

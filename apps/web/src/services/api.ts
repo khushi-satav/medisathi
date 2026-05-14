@@ -95,4 +95,11 @@ export const aiService = {
   predict: () => api.get('/ai/predict'),
 };
 
+// ─── ML Predictions ───────────────────────────────────────────────────────────
+export const predictionsService = {
+  // Get adherence risk prediction for a medication
+  getRisk: (medicationId?: string) =>
+    api.get(`/predictions${medicationId ? `?medicationId=${medicationId}` : ''}`),
+};
+
 export default api;
