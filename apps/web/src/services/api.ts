@@ -106,6 +106,5 @@ export const predictionsService = {
   getRisk: (medicationId?: string) =>
     api.get(`/predictions${medicationId ? `?medicationId=${medicationId}` : ''}`),
 };
-};
 
 export default api;
