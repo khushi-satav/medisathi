@@ -100,4 +100,12 @@ export const caregiverService = {
   getPatients: () => api.get('/caregiver/patients'),
 };
 
+// ─── ML Predictions ───────────────────────────────────────────────────────────
+export const predictionsService = {
+  // Get adherence risk prediction for a medication
+  getRisk: (medicationId?: string) =>
+    api.get(`/predictions${medicationId ? `?medicationId=${medicationId}` : ''}`),
+};
+};
+
 export default api;

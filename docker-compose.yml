@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # ─── MongoDB (primary database for the Next.js app) ──────────────────────
+  mongodb:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis (for BullMQ job queues / caching) ────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  # ─── ML API (FastAPI — adherence prediction + OCR) ──────────────────────
+  ml-api:
+    build:
+      context: ./apps/ml-api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - ML_API_SECRET=local-dev-secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mongodata:
+  redisdata:

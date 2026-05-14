@@ -3,8 +3,11 @@ import { requireAuth } from '@/lib/auth';
 import connectDB from '@/lib/mongoose';
 import Prescription from '@/models/Prescription';
 import Medication from '@/models/Medication';
-import { uploadToCloudinary } from '@/server/services/cloudinary';
-import { extractPrescription } from '@/server/services/gemini';
+import { scanPrescription } from '@/lib/mlClient';
+
+// Only import Gemini/Cloudinary if keys are configured
+const hasGemini = !!process.env.GEMINI_API_KEY;
+const hasCloudinary = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY);
 
 function mapFrequencyToTimes(frequency?: string): string[] {
   if (!frequency) return ['09:00'];
@@ -30,35 +33,102 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
-    // Read file
+    // Read file into buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64Data = buffer.toString('base64');
-    const dataUri = `data:${file.type};base64,${base64Data}`;
 
-    // ─── Step 1: Upload to Cloudinary (FREE tier) ───────────────────────────
+    // ─── Step 1: Upload to Cloudinary (optional) ──────────────────────────
     let fileUrl = '';
-    try {
-      fileUrl = await uploadToCloudinary(dataUri, userPayload.id, 'prescriptions');
-    } catch (err: any) {
-      console.error('Cloudinary upload failed:', err.message);
-      // Fallback: store as data URI (not recommended for production)
-      fileUrl = `data:${file.type};base64,${base64Data.slice(0, 100)}...`;
+    if (hasCloudinary) {
+      try {
+        const { uploadToCloudinary } = await import('@/server/services/cloudinary');
+        const dataUri = `data:${file.type};base64,${base64Data}`;
+        fileUrl = await uploadToCloudinary(dataUri, userPayload.id, 'prescriptions');
+      } catch (err: any) {
+        console.warn('Cloudinary upload skipped:', err.message);
+      }
+    }
+    // Fallback: store a placeholder URL (image is processed server-side anyway)
+    if (!fileUrl) {
+      fileUrl = `local://prescription/${userPayload.id}/${Date.now()}_${file.name}`;
     }
 
-    // ─── Step 2: Gemini Vision — OCR + Parse (FREE) ─────────────────────────
-    let parsedData: any = { medicines: [], doctor: {}, patient: {}, confidence: 0, warnings: [] };
+    // ─── Step 2: OCR — try ML API (PaddleOCR) first, then Gemini fallback ─
+    let parsedData: any = null;
+    let ocrSource = 'none';
+
+    // Strategy A: ML API (PaddleOCR) — works locally, no API key needed
     try {
-      parsedData = await extractPrescription(base64Data, file.type);
-    } catch (aiErr: any) {
-      console.error('Gemini Vision failed:', aiErr.message);
-      return NextResponse.json(
-        { error: 'AI prescription analysis failed. Please try a clearer image.' },
-        { status: 502 }
-      );
+      console.log('Attempting OCR via ML API (PaddleOCR)...');
+      const mlResult = await scanPrescription(buffer, file.name, file.type);
+
+      if (mlResult?.success && mlResult.medicines?.length > 0) {
+        ocrSource = 'paddleocr';
+        parsedData = {
+          doctor: { name: '', registration: '', hospital: '' },
+          patient: { name: '', age: '', date: '' },
+          medicines: mlResult.medicines.map((m: any) => ({
+            name: m.name,
+            genericName: m.genericName || '',
+            dosage: m.dosage || '',
+            form: m.form || 'tablet',
+            frequency: m.frequency || 'Once daily',
+            times: m.times || mapFrequencyToTimes(m.frequency),
+            foodInstruction: m.foodInstruction || 'after_meal',
+            duration: m.duration || '30 days',
+            specialInstructions: m.instructions || '',
+            quantity: m.quantity || 30,
+          })),
+          confidence: mlResult.medicines.reduce(
+            (sum: number, m: any) => sum + (m.confidence || 70), 0
+          ) / mlResult.medicines.length / 100,
+          warnings: [],
+          rawText: mlResult.raw_text,
+        };
+        console.log(`ML API OCR: found ${mlResult.medicines.length} medicines`);
+      } else {
+        console.log('ML API OCR: no medicines found, trying fallback...');
+      }
+    } catch (mlErr: any) {
+      console.warn('ML API OCR failed:', mlErr.message);
     }
 
-    // ─── Step 3: Save Prescription record ────────────────────────────────────
+    // Strategy B: Gemini Vision fallback (requires API key)
+    if (!parsedData && hasGemini) {
+      try {
+        console.log('Attempting OCR via Gemini Vision...');
+        const { extractPrescription } = await import('@/server/services/gemini');
+        parsedData = await extractPrescription(base64Data, file.type);
+        ocrSource = 'gemini';
+        console.log(`Gemini OCR: found ${parsedData?.medicines?.length || 0} medicines`);
+      } catch (aiErr: any) {
+        console.warn('Gemini Vision failed:', aiErr.message);
+      }
+    }
+
+    // If both OCR strategies failed
+    if (!parsedData || !parsedData.medicines?.length) {
+      // Save prescription with failed status
+      const prescription = await Prescription.create({
+        userId: userPayload.id,
+        fileUrl,
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        status: 'failed',
+        errorMessage: 'Could not extract medicines. Please try a clearer image.',
+      });
+
+      return NextResponse.json({
+        success: false,
+        prescription: { _id: prescription._id },
+        extractedMedicines: [],
+        error: 'No medicines could be extracted. Try a clearer, well-lit photo of the prescription.',
+      }, { status: 200 }); // 200 so frontend can show a helpful message
+    }
+
+    // ─── Step 3: Save Prescription record ────────────────────────────────
     const prescription = await Prescription.create({
       userId: userPayload.id,
       fileUrl,
@@ -67,12 +137,13 @@ export async function POST(req: NextRequest) {
       fileSize: file.size,
       aiExtracted: parsedData,
       aiConfidence: parsedData.confidence,
+      ocrRawText: parsedData.rawText?.join('\n') || '',
       doctorName: parsedData.doctor?.name || '',
       hospitalName: parsedData.doctor?.hospital || '',
       status: 'ai_done',
     });
 
-    // ─── Step 4: Auto-create Medications ─────────────────────────────────────
+    // ─── Step 4: Auto-create Medications ─────────────────────────────────
     const addedMeds = [];
     for (const med of parsedData.medicines || []) {
       try {
@@ -96,14 +167,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    console.log(`Prescription processed: ${addedMeds.length} meds added via ${ocrSource}`);
+
     return NextResponse.json({
       success: true,
+      prescription: { _id: prescription._id },
       prescriptionId: prescription._id,
       fileUrl,
       extracted: parsedData,
       extractedMedicines: parsedData.medicines || [],
       medications: addedMeds,
       confidence: parsedData.confidence,
+      ocrSource,
     });
 
   } catch (error: any) {
