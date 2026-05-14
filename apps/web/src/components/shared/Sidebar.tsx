@@ -10,14 +10,20 @@ import {
   LogOut, ChevronRight, User, MessageSquare, Calendar, Bell, LineChart, Users, ScanLine
 } from 'lucide-react';
 
-const navItems = [
+const patientNavItems = [
   { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/medications',     label: 'Medications',       icon: Pill },
   { href: '/dose-tracker',    label: 'Tracker',           icon: Calendar },
   { href: '/scan-rx',         label: 'Scan Prescription', icon: ScanLine },
   { href: '/insights',        label: 'AI Insights',       icon: LineChart },
-  { href: '/caregiver',       label: 'Caregiver',         icon: Users },
   { href: '/messages',        label: 'Messages',          icon: MessageSquare, badge: 2 },
+  { href: '/settings',        label: 'Settings',          icon: Settings },
+];
+
+const caregiverNavItems = [
+  { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
+  { href: '/caregiver',       label: 'My Patients',       icon: Users },
+  { href: '/messages',        label: 'Messages',          icon: MessageSquare, badge: 1 },
   { href: '/settings',        label: 'Settings',          icon: Settings },
 ];
 
@@ -46,7 +52,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-4 py-2 space-y-2 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon, badge }) => {
+        {(user?.role === 'caregiver' ? caregiverNavItems : patientNavItems).map(({ href, label, icon: Icon, badge }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
           return (
             <Link key={href} href={href} className="relative block group">

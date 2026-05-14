@@ -11,7 +11,7 @@ import TopNavbar from '@/components/layout/TopNavbar';
 import { useState } from 'react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
@@ -51,9 +51,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
             <span className="ml-3 text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">MediSaathi</span>
           </div>
-          <button onClick={() => setChatOpen(true)} className="p-2 rounded-full bg-primary/10 text-primary">
-            <MessageSquare size={20} />
-          </button>
+          {user?.role !== 'caregiver' && (
+            <button onClick={() => setChatOpen(true)} className="p-2 rounded-full bg-primary/10 text-primary">
+              <MessageSquare size={20} />
+            </button>
+          )}
         </div>
 
         {/* Desktop Top Navbar */}
@@ -67,28 +69,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile bottom tab bar */}
       <MobileTabBar />
 
-      {/* AI Chat Floating Action */}
-      <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 flex flex-col items-end">
-        {chatOpen && (
-          <div className="mb-4 shadow-2xl rounded-3xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 w-[350px] md:w-[400px]">
-            <div className="relative">
-              <button 
-                onClick={() => setChatOpen(false)}
-                className="absolute top-4 right-4 z-20 p-1 bg-white/20 hover:bg-white/40 rounded-full text-white transition-colors"
-              >
-                <X size={16} />
-              </button>
-              <AIChatAssistant />
+      {/* AI Chat Floating Action - Patient Only */}
+      {user?.role !== 'caregiver' && (
+        <div className="fixed bottom-20 md:bottom-8 right-4 md:right-8 z-50 flex flex-col items-end">
+          {chatOpen && (
+            <div className="mb-4 shadow-2xl rounded-3xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 w-[350px] md:w-[400px]">
+              <div className="relative">
+                <button 
+                  onClick={() => setChatOpen(false)}
+                  className="absolute top-4 right-4 z-20 p-1 bg-white/20 hover:bg-white/40 rounded-full text-white transition-colors"
+                >
+                  <X size={16} />
+                </button>
+                <AIChatAssistant />
+              </div>
             </div>
-          </div>
-        )}
-        <button 
-          onClick={() => setChatOpen(!chatOpen)}
-          className={`md:hidden p-4 rounded-full shadow-xl text-white transition-all duration-300 ${chatOpen ? 'bg-slate-800 hover:bg-slate-700 hover:rotate-90' : 'bg-gradient-to-r from-primary to-secondary hover:shadow-primary/50 hover:scale-105'}`}
-        >
-          {chatOpen ? <X size={24} /> : <MessageSquare size={24} />}
-        </button>
-      </div>
+          )}
+          <button 
+            onClick={() => setChatOpen(!chatOpen)}
+            className={`md:hidden p-4 rounded-full shadow-xl text-white transition-all duration-300 ${chatOpen ? 'bg-slate-800 hover:bg-slate-700 hover:rotate-90' : 'bg-gradient-to-r from-primary to-secondary hover:shadow-primary/50 hover:scale-105'}`}
+          >
+            {chatOpen ? <X size={24} /> : <MessageSquare size={24} />}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -140,6 +140,46 @@ async function seed() {
 
   console.log(`   ✅ User ID: ${user._id}  | Email: sunita@gmail.com | Password: Sunita@123`);
 
+  // ── 1.1 Caregiver ────────────────────────────────────────────────────────
+  console.log('\n👥 Creating caregiver: Anil Kumar...');
+
+  const caregiverPasswordHash = await bcrypt.hash('Anil@123', 12);
+
+  const caregiver = await User.findOneAndUpdate(
+    { email: 'anil@gmail.com' },
+    {
+      $setOnInsert: {
+        email: 'anil@gmail.com',
+        phone: '+919999999999',
+        passwordHash: caregiverPasswordHash,
+        name: 'Anil Kumar',
+        role: 'caregiver',
+        isVerified: true,
+        caregiverLinks: [{
+          userId: user._id,
+          relationship: 'Son',
+          permissions: ['view_meds', 'receive_alerts', 'log_doses'],
+          isActive: true
+        }],
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  // Link Sunita to Anil too
+  await User.findByIdAndUpdate(user._id, {
+    $set: {
+      caregiverLinks: [{
+        userId: caregiver._id,
+        relationship: 'Son',
+        permissions: ['all'],
+        isActive: true
+      }]
+    }
+  });
+
+  console.log(`   ✅ Caregiver ID: ${caregiver._id} | Email: anil@gmail.com | Password: Anil@123`);
+
   // ── 2. Medications ────────────────────────────────────────────────────────
   console.log('\n💊 Creating medications...');
 
@@ -296,9 +336,8 @@ async function seed() {
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log('\n' + '─'.repeat(50));
   console.log('🎉 Seed complete! Login credentials:');
-  console.log('   📧 Email   : sunita@gmail.com');
-  console.log('   🔑 Password: Sunita@123');
-  console.log('   🆔 User ID : ' + user._id);
+  console.log('   👤 Patient  : sunita@gmail.com / Sunita@123');
+  console.log('   👤 Caregiver: anil@gmail.com   / Anil@123');
   console.log('─'.repeat(50) + '\n');
 }
 

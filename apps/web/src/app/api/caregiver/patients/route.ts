@@ -8,14 +8,16 @@ export async function GET(req: NextRequest) {
     const userPayload = requireAuth(req);
     await connectDB();
 
-    const caregiver = await User.findById(userPayload.id).populate('managedPatients');
-    if (!caregiver || caregiver.role !== 'CAREGIVER') {
+    const caregiver = await User.findById(userPayload.id).populate('caregiverLinks.userId');
+    
+    if (!caregiver || caregiver.role !== 'caregiver') {
       return NextResponse.json({ error: 'Access denied. Must be a caregiver.' }, { status: 403 });
     }
 
-    // In a real app we'd use CaregiverLink model to find patients, 
-    // but assuming managedPatients relation or similar schema for simplicity
-    const patients = caregiver.managedPatients || [];
+    // Extract the populated patients from the caregiverLinks array
+    const patients = caregiver.caregiverLinks
+      .filter((link: any) => link.isActive && link.userId)
+      .map((link: any) => link.userId);
 
     return NextResponse.json({ patients });
   } catch (error: any) {

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { prescriptionsService } from '@/services/api';
-import { Upload, Scan, FileText, CheckCircle2, Plus, X, Loader2, Camera, FlaskConical, ShieldCheck, Brain, Zap, Globe, Eye, ChevronRight } from 'lucide-react';
+import { Upload, Scan, FileText, CheckCircle2, Plus, X, Loader2, Camera, FlaskConical, ShieldCheck, Brain, Zap, Globe, Eye, ChevronRight, AlertTriangle, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 type ExtractedMed = {
@@ -42,6 +42,8 @@ export default function ScanRxPage() {
   const [extractedMeds, setExtractedMeds] = useState<ExtractedMed[]>([]);
   const [prescriptionId, setPrescriptionId] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [fdaData, setFdaData] = useState<any | null>(null);
+  const [fetchingFda, setFetchingFda] = useState<string | null>(null);
 
   const { data: rxData } = useQuery({ queryKey: ['prescriptions'], queryFn: () => prescriptionsService.getAll() });
   const prescriptions = rxData?.data?.prescriptions ?? [];
@@ -75,7 +77,7 @@ export default function ScanRxPage() {
     animateSteps();
     try {
       const { data } = await prescriptionsService.upload(file);
-      setPrescriptionId(data.prescription._id);
+      setPrescriptionId(data.prescriptionId);
       const meds = data.extractedMedicines || [];
       setExtractedMeds(meds.map((m: any) => ({ ...m, selected: true, confidence: Math.floor(Math.random() * 8 + 90), pillColor: ['#6366f1','#10b981','#f59e0b','#ec4899','#3b82f6'][Math.floor(Math.random()*5)] })));
       if (meds.length > 0) toast.success(`Extracted ${meds.length} medication${meds.length !== 1 ? 's' : ''}!`);
@@ -103,6 +105,23 @@ export default function ScanRxPage() {
     if (!selected.length) { toast.error('Select at least one'); return; }
     if (prescriptionId === 'demo') { toast.success(`${selected.length} medications added (demo mode)!`); setExtractedMeds([]); setPrescriptionId(null); setStep(-1); return; }
     addMedsMutation.mutate({ rxId: prescriptionId, meds: selected });
+  };
+
+  const fetchFdaInfo = async (drugName: string) => {
+    setFetchingFda(drugName);
+    try {
+      const res = await fetch(`/api/fda/drug-info?drug=${encodeURIComponent(drugName)}`);
+      const data = await res.json();
+      if (res.ok) {
+        setFdaData(data);
+      } else {
+        toast.error(data.error || 'FDA data not found for this drug.');
+      }
+    } catch (err) {
+      toast.error('Failed to fetch from FDA.');
+    } finally {
+      setFetchingFda(null);
+    }
   };
 
   return (
@@ -156,30 +175,30 @@ export default function ScanRxPage() {
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
                 {/* Scan laser line */}
                 <div className="absolute left-4 right-4 h-0.5 scan-line" style={{ background: 'linear-gradient(90deg,transparent,#6366f1,transparent)' }} />
-                <div className="w-16 h-16 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center mb-3 float-icon relative pulse-ring">
-                  <Brain size={28} className="text-indigo-400" />
+                <div className="w-16 h-16 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center mb-3 float-icon relative pulse-ring">
+                  <Brain size={28} className="text-primary-light" />
                 </div>
                 <p className="text-white font-bold text-sm">AI Processing…</p>
-                <p className="text-indigo-300 text-xs mt-1">Analyzing prescription</p>
+                <p className="text-secondary-dark text-xs mt-1">Analyzing prescription</p>
               </div>
             ) : preview ? (
               <div className="p-3 flex flex-col items-center justify-center h-full">
                 <img src={preview} alt="Rx" className="max-h-44 rounded-xl object-contain shadow-lg" />
-                <p className="text-indigo-300 text-xs mt-2">Click to upload another</p>
-                <button onClick={() => fileRef.current?.click()} className="mt-2 text-xs bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 px-3 py-1 rounded-full hover:bg-indigo-600/50 transition-all">Replace Image</button>
+                <p className="text-secondary-dark text-xs mt-2">Click to upload another</p>
+                <button onClick={() => fileRef.current?.click()} className="mt-2 text-xs bg-primary/30 border border-primary/30 text-secondary-dark px-3 py-1 rounded-full hover:bg-primary/50 transition-all">Replace Image</button>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full p-6 gap-3" style={{ minHeight: 280 }}>
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg float-icon">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg float-icon">
                   <Scan size={30} className="text-white" />
                 </div>
                 <div className="text-center">
                   <p className="text-white font-bold">Scan Your Prescription</p>
-                  <p className="text-indigo-300 text-xs mt-1">AI detects medicines instantly</p>
+                  <p className="text-secondary-dark text-xs mt-1">AI detects medicines instantly</p>
                 </div>
                 {/* Floating particles */}
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="absolute w-1 h-1 rounded-full bg-indigo-400/50" style={{ top: `${15+i*12}%`, left: `${10+i*14}%`, animation: `float ${2+i*0.4}s ease-in-out infinite ${i*0.3}s` }} />
+                  <div key={i} className="absolute w-1 h-1 rounded-full bg-primary/50" style={{ top: `${15+i*12}%`, left: `${10+i*14}%`, animation: `float ${2+i*0.4}s ease-in-out infinite ${i*0.3}s` }} />
                 ))}
               </div>
             )}
@@ -188,8 +207,8 @@ export default function ScanRxPage() {
           {/* Quick actions */}
           <div className="grid grid-cols-1 gap-2">
             <button onClick={() => fileRef.current?.click()} disabled={uploading}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:bg-indigo-50 hover:border-indigo-300 transition-all text-sm font-semibold text-slate-700 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center"><Upload size={16} className="text-indigo-600" /></div>
+              className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:bg-secondary/10 hover:border-secondary-dark transition-all text-sm font-semibold text-slate-700 shadow-sm">
+              <div className="w-8 h-8 rounded-lg bg-secondary/30 flex items-center justify-center"><Upload size={16} className="text-primary" /></div>
               Browse Files
               <ChevronRight size={14} className="ml-auto text-slate-400" />
             </button>
@@ -255,7 +274,7 @@ export default function ScanRxPage() {
               <div className="space-y-3 flex-1 overflow-y-auto max-h-80 pr-1">
                 {extractedMeds.map((med, i) => (
                   <div key={i} onClick={() => toggleMed(i)}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 ${med.selected ? 'border-indigo-200 bg-indigo-50/60 shadow-sm' : 'border-slate-200 bg-slate-50 opacity-50'}`}>
+                    className={`p-3 rounded-xl border cursor-pointer transition-all duration-200 ${med.selected ? 'border-secondary bg-secondary/20 shadow-sm' : 'border-slate-200 bg-slate-50 opacity-50'}`}>
                     <div className="flex items-start gap-3">
                       {/* Pill dot */}
                       <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5" style={{ background: (med.pillColor || '#6366f1') + '20' }}>
@@ -278,8 +297,16 @@ export default function ScanRxPage() {
                             <div className="h-full rounded-full transition-all duration-700" style={{ width: `${med.confidence}%`, background: med.pillColor }} />
                           </div>
                         </div>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); fetchFdaInfo(med.name); }}
+                          disabled={fetchingFda === med.name}
+                          className="mt-3 flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold bg-white border border-slate-200 text-slate-600 rounded-md hover:bg-slate-50 transition-colors"
+                        >
+                          {fetchingFda === med.name ? <Loader2 size={12} className="animate-spin text-primary" /> : <ShieldCheck size={12} className="text-primary" />}
+                          Check FDA Info
+                        </button>
                       </div>
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${med.selected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all ${med.selected ? 'bg-primary border-primary' : 'border-slate-300'}`}>
                         {med.selected && <CheckCircle2 size={10} className="text-white" />}
                       </div>
                     </div>
@@ -296,8 +323,8 @@ export default function ScanRxPage() {
             </div>
           ) : (
             <div className="rounded-2xl p-6 h-full flex flex-col items-center justify-center text-center gap-4" style={{ background: 'linear-gradient(135deg,#f8faff,#f0f4ff)', border: '1.5px dashed #c7d2fe', minHeight: 300 }}>
-              <div className="w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center">
-                <FileText size={28} className="text-indigo-400" />
+              <div className="w-16 h-16 rounded-2xl bg-secondary/30 flex items-center justify-center">
+                <FileText size={28} className="text-primary-light" />
               </div>
               <div>
                 <p className="font-bold text-slate-700">Extracted Medicines</p>
@@ -327,8 +354,8 @@ export default function ScanRxPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {prescriptions.slice(0, 6).map((rx: any) => (
               <div key={rx._id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
-                  <FileText size={18} className="text-indigo-600" />
+                <div className="w-10 h-10 rounded-xl bg-secondary/30 flex items-center justify-center shrink-0">
+                  <FileText size={18} className="text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 truncate">{rx.fileName || 'Prescription'}</p>
@@ -339,6 +366,48 @@ export default function ScanRxPage() {
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* FDA Modal */}
+      {fdaData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => setFdaData(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <ShieldCheck size={16} className="text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800 leading-tight">{fdaData.name}</h3>
+                  <p className="text-xs text-slate-500 font-medium">Live FDA Database</p>
+                </div>
+              </div>
+              <button onClick={() => setFdaData(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto text-sm text-slate-600">
+              <div className="p-3 rounded-xl bg-red-50 border border-red-100">
+                <div className="flex items-center gap-2 mb-1.5 text-red-700 font-bold">
+                  <AlertTriangle size={16} /> Warnings
+                </div>
+                <p className="text-red-600/90 text-xs leading-relaxed">{fdaData.warnings}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-orange-50 border border-orange-100">
+                <div className="flex items-center gap-2 mb-1.5 text-orange-700 font-bold">
+                  <Info size={16} /> Key Side Effects
+                </div>
+                <p className="text-orange-600/90 text-xs leading-relaxed">{fdaData.sideEffects}</p>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div className="flex items-center gap-2 mb-1.5 text-slate-700 font-bold">
+                  <Globe size={16} className="text-slate-500" /> Drug Interactions
+                </div>
+                <p className="text-slate-600 text-xs leading-relaxed">{fdaData.interactions}</p>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -61,7 +61,7 @@ export default function InsightsPage() {
           {([7, 30, 90] as Period[]).map(p => (
             <button key={p} onClick={() => setPeriod(p)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                period === p ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
+                period === p ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
               {PERIOD_LABELS[p]}
             </button>
           ))}
@@ -77,7 +77,7 @@ export default function InsightsPage() {
           {/* KPI Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Adherence', value: `${adherencePercentage}%`, sub: `${period}-day rate`, icon: <TrendingUp size={20} />, color: 'bg-indigo-100 text-indigo-600', bold: adherencePercentage >= 80 ? 'text-emerald-600' : adherencePercentage >= 50 ? 'text-amber-600' : 'text-red-600' },
+              { label: 'Adherence', value: `${adherencePercentage}%`, sub: `${period}-day rate`, icon: <TrendingUp size={20} />, color: 'bg-secondary/30 text-primary', bold: adherencePercentage >= 80 ? 'text-emerald-600' : adherencePercentage >= 50 ? 'text-amber-600' : 'text-red-600' },
               { label: 'Total Doses', value: totalDoses, sub: `in ${period} days`, icon: <BarChart3 size={20} />, color: 'bg-slate-100 text-slate-600', bold: 'text-slate-800' },
               { label: 'Taken', value: takenDoses, sub: `${totalDoses ? Math.round(takenDoses / totalDoses * 100) : 0}% of total`, icon: <CheckCircle2 size={20} />, color: 'bg-emerald-100 text-emerald-600', bold: 'text-emerald-700' },
               { label: 'Missed', value: missedDoses, sub: 'doses missed', icon: <XCircle size={20} />, color: 'bg-red-100 text-red-600', bold: missedDoses > 0 ? 'text-red-600' : 'text-slate-800' },
@@ -176,16 +176,16 @@ export default function InsightsPage() {
 
           {/* AI Insights */}
           {aiInsights.length > 0 && (
-            <div className="card bg-gradient-to-br from-indigo-50 to-purple-50 border-indigo-100">
+            <div className="card bg-gradient-to-br from-secondary/10 to-primary/10 border-secondary-light">
               <div className="flex items-center space-x-2 mb-4">
-                <div className="p-2 bg-indigo-600 rounded-xl"><TrendingUp size={16} className="text-white" /></div>
+                <div className="p-2 bg-primary rounded-xl"><TrendingUp size={16} className="text-white" /></div>
                 <h3 className="font-bold text-slate-800">AI Recommendations</h3>
-                <span className="text-xs bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">GPT-4o</span>
+                <span className="text-xs bg-secondary/30 text-primary px-2 py-0.5 rounded-full font-semibold">GPT-4o</span>
               </div>
               <ul className="space-y-3">
                 {aiInsights.map((insight: string, i: number) => (
                   <li key={i} className="flex items-start space-x-2 text-sm text-slate-700">
-                    <span className="text-indigo-500 mt-0.5 shrink-0">→</span>
+                    <span className="text-primary mt-0.5 shrink-0">→</span>
                     <span>{insight}</span>
                   </li>
                 ))}

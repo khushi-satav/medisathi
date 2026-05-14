@@ -37,26 +37,31 @@ export default function TopNavbar({ onOpenAIChat }: { onOpenAIChat: () => void }
 
       {/* Right side: Actions */}
       <div className="flex items-center space-x-5">
-        {/* Search */}
-        <div className="relative group">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={16} className="text-muted group-focus-within:text-primary transition-colors" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search medications..."
-            className="w-64 pl-10 pr-4 py-2 bg-card border border-border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all placeholder:text-muted/70 text-foreground"
-          />
-        </div>
+        {/* Patient-specific features */}
+        {user?.role !== 'caregiver' && (
+          <>
+            {/* Search */}
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search size={16} className="text-muted group-focus-within:text-primary transition-colors" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search medications..."
+                className="w-64 pl-10 pr-4 py-2 bg-card border border-border rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all placeholder:text-muted/70 text-foreground"
+              />
+            </div>
 
-        {/* AI Assistant Button */}
-        <button 
-          onClick={onOpenAIChat}
-          className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gradient-to-r from-secondary/20 to-primary/20 text-primary-dark hover:from-secondary/30 hover:to-primary/30 transition-all shadow-sm shadow-primary/5 border border-primary/15"
-        >
-          <Sparkles size={16} className="text-primary" />
-          <span className="text-sm font-semibold">Ask AI</span>
-        </button>
+            {/* AI Assistant Button */}
+            <button 
+              onClick={onOpenAIChat}
+              className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gradient-to-r from-secondary/20 to-primary/20 text-primary-dark hover:from-secondary/30 hover:to-primary/30 transition-all shadow-sm shadow-primary/5 border border-primary/15"
+            >
+              <Sparkles size={16} className="text-primary" />
+              <span className="text-sm font-semibold">Ask AI</span>
+            </button>
+          </>
+        )}
 
         {/* Notifications */}
         <button className="relative p-2 rounded-full text-muted hover:text-foreground hover:bg-card transition-colors shadow-sm border border-transparent hover:border-border">
@@ -87,6 +92,9 @@ export default function TopNavbar({ onOpenAIChat }: { onOpenAIChat: () => void }
                 <div className="p-4 border-b border-border bg-sidebar/50">
                   <p className="text-sm font-bold text-foreground truncate">{user?.name || 'User'}</p>
                   <p className="text-xs text-muted truncate mt-0.5">{user?.email}</p>
+                  <span className="inline-block mt-2 px-2 py-0.5 bg-primary/10 text-primary-dark text-[10px] font-black uppercase tracking-widest rounded-md">
+                    {user?.role || 'Patient'}
+                  </span>
                 </div>
                 <div className="p-2">
                   <button onClick={() => router.push('/settings')} className="w-full flex items-center space-x-3 px-3 py-2 text-sm text-muted hover:bg-sidebar hover:text-primary-dark rounded-xl transition-colors">

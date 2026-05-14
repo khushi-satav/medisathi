@@ -95,4 +95,9 @@ export const aiService = {
   predict: () => api.get('/ai/predict'),
 };
 
+// ─── Caregiver ────────────────────────────────────────────────────────────────
+export const caregiverService = {
+  getPatients: () => api.get('/caregiver/patients'),
+};
+
 export default api;

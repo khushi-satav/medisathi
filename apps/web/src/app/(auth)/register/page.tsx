@@ -16,7 +16,7 @@ export default function RegisterPage() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     name: '', email: '', phone: '', password: '', confirmPassword: '',
-    age: '', gender: '',
+    age: '', gender: '', role: 'patient',
   });
 
   const updateForm = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -49,6 +49,7 @@ export default function RegisterPage() {
         password: form.password,
         age: form.age ? parseInt(form.age) : undefined,
         gender: form.gender || undefined,
+        role: form.role,
       };
       const { data } = await authService.register(payload);
       login(data.user, data.token);
@@ -94,6 +95,25 @@ export default function RegisterPage() {
                 <div>
                   <label className="label text-foreground font-semibold mb-1.5 block">Full Name *</label>
                   <input id="name" className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="Rahul Sharma" value={form.name} onChange={e => updateForm('name', e.target.value)} />
+                </div>
+                <div>
+                  <label className="label text-foreground font-semibold mb-1.5 block">I am a...</label>
+                  <div className="flex p-1 bg-secondary/20 rounded-2xl">
+                    <button 
+                      type="button"
+                      onClick={() => updateForm('role', 'patient')}
+                      className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${form.role === 'patient' ? 'bg-white text-primary shadow-sm' : 'text-muted'}`}
+                    >
+                      Patient
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => updateForm('role', 'caregiver')}
+                      className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${form.role === 'caregiver' ? 'bg-white text-primary shadow-sm' : 'text-muted'}`}
+                    >
+                      Caregiver
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="label text-foreground font-semibold mb-1.5 block">Email *</label>

@@ -6,7 +6,7 @@ import { generateToken } from '@/lib/auth';
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
-    const { name, email, phone, password, age, gender, conditions } = await req.json();
+    const { name, email, phone, password, age, gender, conditions, role } = await req.json();
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: 'Name, email and password are required' }, { status: 400 });
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       gender: gender || undefined,
       passwordHash: password,
       conditions: conditions || [],
-      role: 'patient',
+      role: role || 'patient',
     });
 
     const token = generateToken(user._id.toString(), user.role);

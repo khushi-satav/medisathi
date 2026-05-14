@@ -83,7 +83,7 @@ export default function SettingsPage() {
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === t.id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
+              tab === t.id ? 'bg-primary text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}>
             {t.icon}<span>{t.label}</span>
           </button>
         ))}
@@ -96,7 +96,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 relative overflow-hidden group hover:-translate-y-1 transition-transform">
               <div className="flex items-center gap-2 mb-2">
-                <Activity size={16} className="text-indigo-500" />
+                <Activity size={16} className="text-primary" />
                 <p className="text-sm font-medium text-slate-500">Blood Sugar</p>
               </div>
               <p className="text-2xl font-bold text-slate-800">110 <span className="text-sm text-slate-500 font-normal">mg/dL</span></p>
@@ -134,17 +134,17 @@ export default function SettingsPage() {
             
             <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 relative overflow-hidden group hover:-translate-y-1 transition-transform">
               <div className="flex items-center gap-2 mb-2">
-                <Smile size={16} className="text-blue-500" />
+                <Smile size={16} className="text-primary" />
                 <p className="text-sm font-medium text-slate-500">Most Common Mood</p>
               </div>
               <p className="text-xl font-bold text-slate-800 mt-1">Energetic 😊</p>
               {/* Sparkline approximation */}
               <div className="mt-2 h-4 flex items-end gap-1">
-                <div className="w-full h-[40%] bg-blue-200 rounded-t-sm"></div>
-                <div className="w-full h-[60%] bg-blue-300 rounded-t-sm"></div>
-                <div className="w-full h-[50%] bg-blue-200 rounded-t-sm"></div>
-                <div className="w-full h-[90%] bg-blue-500 rounded-t-sm"></div>
-                <div className="w-full h-[100%] bg-blue-500 rounded-t-sm"></div>
+                <div className="w-full h-[40%] bg-secondary rounded-t-sm"></div>
+                <div className="w-full h-[60%] bg-secondary-dark rounded-t-sm"></div>
+                <div className="w-full h-[50%] bg-secondary rounded-t-sm"></div>
+                <div className="w-full h-[90%] bg-primary rounded-t-sm"></div>
+                <div className="w-full h-[100%] bg-primary rounded-t-sm"></div>
               </div>
             </div>
           </div>
@@ -189,7 +189,7 @@ export default function SettingsPage() {
                       <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
                     </div>
                     <button
-                      className={`relative w-11 h-6 rounded-full transition-colors ${item.enabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${item.enabled ? 'bg-primary' : 'bg-slate-300'}`}
                       onClick={() => toast('Notification settings — coming soon!', { icon: '🔔' })}>
                       <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${item.enabled ? 'left-5.5' : 'left-0.5'}`} />
                     </button>
@@ -212,7 +212,7 @@ export default function SettingsPage() {
                       <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
                     </div>
                     <button
-                      className={`relative w-11 h-6 rounded-full transition-colors ${item.enabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${item.enabled ? 'bg-primary' : 'bg-slate-300'}`}
                       onClick={() => toast('Notification settings — coming soon!', { icon: '🔔' })}>
                       <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${item.enabled ? 'left-5.5' : 'left-0.5'}`} />
                     </button>
@@ -235,7 +235,7 @@ export default function SettingsPage() {
                       <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
                     </div>
                     <button
-                      className={`relative w-11 h-6 rounded-full transition-colors ${item.enabled ? 'bg-indigo-600' : 'bg-slate-300'}`}
+                      className={`relative w-11 h-6 rounded-full transition-colors ${item.enabled ? 'bg-primary' : 'bg-slate-300'}`}
                       onClick={() => toast('Notification settings — coming soon!', { icon: '🔔' })}>
                       <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${item.enabled ? 'left-5.5' : 'left-0.5'}`} />
                     </button>
@@ -246,7 +246,7 @@ export default function SettingsPage() {
 
             <div className="pt-2 flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50">
               <span className="text-sm font-medium text-slate-700">Advance Reminder Time</span>
-              <select className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-2 outline-none">
+              <select className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-primary focus:border-primary block p-2 outline-none">
                 <option>5 minutes before</option>
                 <option>10 minutes before</option>
                 <option selected>15 minutes before</option>
@@ -273,7 +273,7 @@ export default function SettingsPage() {
                   <p className="text-white/80 text-sm mt-1">Get real Twilio SMS reminders on your phone</p>
                 </div>
               </div>
-              <button className="bg-white text-indigo-600 font-semibold mt-6 w-full py-3 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
+              <button className="bg-white text-primary font-semibold mt-6 w-full py-3 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
                 Add Phone Number →
               </button>
             </div>
@@ -293,7 +293,7 @@ export default function SettingsPage() {
                 <p className="text-xs text-slate-500 mt-0.5">Toggle to enable/disable sharing</p>
               </div>
               <button
-                className="relative w-11 h-6 rounded-full transition-colors bg-indigo-600"
+                className="relative w-11 h-6 rounded-full transition-colors bg-primary"
                 onClick={() => toast('Sharing toggled!', { icon: '🔄' })}>
                 <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform left-5.5" />
               </button>
@@ -305,7 +305,7 @@ export default function SettingsPage() {
               
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative flex-1">
-                  <select className="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-2.5 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 font-medium text-sm">
+                  <select className="w-full appearance-none bg-white border border-slate-200 text-slate-700 py-2.5 pl-4 pr-10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary font-medium text-sm">
                     <option>👨‍⚕️ Dr. Sharma (Endocrinologist)</option>
                     <option>👩‍⚕️ Dr. Patel (General)</option>
                     <option>👤 Family Member</option>
@@ -327,7 +327,7 @@ export default function SettingsPage() {
                 Revoke Access
               </button>
               <button 
-                className="data-action-btn flex-1 bg-indigo-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-100 py-2.5 rounded-xl font-semibold text-sm transition-colors"
+                className="data-action-btn flex-1 bg-secondary/10 text-primary border border-secondary-light hover:bg-secondary/30 py-2.5 rounded-xl font-semibold text-sm transition-colors"
                 onClick={() => toast('Downloading Data...')}
               >
                 Download Data

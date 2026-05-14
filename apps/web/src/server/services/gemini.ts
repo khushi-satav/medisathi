@@ -10,7 +10,7 @@ const getClient = () => {
 export async function generateText(prompt: string, systemInstruction?: string): Promise<string> {
   const genAI = getClient();
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash',
     systemInstruction: systemInstruction || 'You are MediSaathi, a caring AI medication assistant for Indian patients. Be concise, clear, and supportive.',
   });
 
@@ -25,7 +25,7 @@ export async function analyzeImage(
   prompt: string
 ): Promise<string> {
   const genAI = getClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   const imagePart: Part = {
     inlineData: { data: base64Image, mimeType },
@@ -70,10 +70,19 @@ Rules:
 - If field not visible, use empty string`;
 
   const text = await analyzeImage(base64Image, mimeType, prompt);
+  console.log('--- GEMINI RAW RESPONSE ---');
+  console.log(text);
+  console.log('---------------------------');
 
   // Extract JSON safely
   const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error('Gemini did not return valid JSON');
+  if (!jsonMatch) {
+    console.error('No JSON match found in Gemini text');
+    throw new Error('Gemini did not return valid JSON');
+  }
 
-  return JSON.parse(jsonMatch[0]);
+  const parsed = JSON.parse(jsonMatch[0]);
+  console.log('--- PARSED JSON ---');
+  console.log(parsed);
+  return parsed;
 }

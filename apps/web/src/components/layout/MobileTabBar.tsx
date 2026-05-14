@@ -4,7 +4,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Pill, ScanLine, BarChart3, Settings } from 'lucide-react';
 
-const tabs = [
+import { useAuthStore } from '@/store/authStore';
+
+const patientTabs = [
   { href: '/dashboard',    label: 'Home',     icon: Home },
   { href: '/medications',  label: 'Meds',     icon: Pill },
   { href: '/scan-rx',      label: 'Scan Rx',  icon: ScanLine, center: true },
@@ -12,8 +14,19 @@ const tabs = [
   { href: '/settings',     label: 'Settings', icon: Settings },
 ];
 
+import { Users, Activity } from 'lucide-react';
+const caregiverTabs = [
+  { href: '/dashboard',       label: 'Home',      icon: Home },
+  { href: '/caregiver',       label: 'Patients',  icon: Users, center: true },
+  { href: '/messages',        label: 'Messages',  icon: Activity },
+  { href: '/settings',        label: 'Settings',  icon: Settings },
+];
+
 export default function MobileTabBar() {
   const pathname = usePathname();
+  const { user } = useAuthStore();
+  const tabs = user?.role === 'caregiver' ? caregiverTabs : patientTabs;
+
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border flex items-center justify-around px-2 pb-safe z-50 md:hidden shadow-[0_-4px_24px_rgba(75,46,43,0.06)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)', paddingTop: 8 }}>

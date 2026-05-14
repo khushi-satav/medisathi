@@ -23,10 +23,16 @@ except:
     os.makedirs("data", exist_ok=True)
 
 class PredictionRequest(BaseModel):
-    userId: str
-    medicationId: Optional[str]
-    targetDate: str
-    features: dict
+    age: int
+    missed_doses_last_7d: int
+    frequency: int
+    has_chronic_condition: int
+    adherence_streak: int
+    hour_of_day: int
+    is_weekend: int
+    num_medications: int
+    days_since_start: int
+    stock_days_remaining: int
 
 class DoseLogRequest(BaseModel):
     userId: str
@@ -36,37 +42,30 @@ class DoseLogRequest(BaseModel):
     hour: int
     dayOfWeek: int
 
-def extract_features(data: dict) -> np.ndarray:
-    """Extract ML features from user data"""
+def extract_features(request: PredictionRequest) -> np.ndarray:
+    """Extract ML features from PredictionRequest"""
     features = [
-        data.get("hour", 12),
-        data.get("dayOfWeek", 0),
-        data.get("isWeekend", 0),
-        data.get("avgAdherence7d", 80),
-        data.get("avgAdherence30d", 80),
-        data.get("consecutiveTaken", 0),
-        data.get("consecutiveMissed", 0),
-        data.get("missRateThisHour", 0.2),
-        data.get("missRateThisDayOfWeek", 0.2),
-        data.get("stockDaysRemaining", 30),
-        data.get("daysSinceStart", 30),
-        data.get("numberOfMeds", 3),
-        data.get("isMorning", 0),
-        data.get("isAfternoon", 0),
-        data.get("isEvening", 0),
-        data.get("streak", 0),
+        request.age,
+        request.missed_doses_last_7d,
+        request.frequency,
+        request.has_chronic_condition,
+        request.adherence_streak,
+        request.hour_of_day,
+        request.is_weekend,
+        request.num_medications,
+        request.days_since_start,
+        request.stock_days_remaining
     ]
     return np.array(features).reshape(1, -1)
 
-def calculate_heuristic_risk(features: dict) -> float:
+def calculate_heuristic_risk(request: PredictionRequest) -> float:
     """Rule-based risk when ML model isn't trained yet"""
-    risk = 0.15
-    if features.get("avgAdherence7d", 100) < 70: risk += 0.25
-    if features.get("avgAdherence7d", 100) < 50: risk += 0.20
-    if features.get("isWeekend", 0): risk += 0.10
-    if features.get("missRateThisHour", 0) > 0.3: risk += 0.15
-    if features.get("consecutiveMissed", 0) > 0: risk += 0.15
-    if features.get("stockDaysRemaining", 30) < 3: risk += 0.20
+    risk = 0.10
+    if request.missed_doses_last_7d >= 3: risk += 0.30
+    if request.adherence_streak < 5: risk += 0.15
+    if request.stock_days_remaining < 3: risk += 0.20
+    if request.is_weekend: risk += 0.10
+    if request.age > 70: risk += 0.10
     return min(risk, 0.95)
 
 def generate_recommendation(level: str, factors: list, features: dict) -> str:
@@ -90,12 +89,17 @@ async def predict_adherence(
     if os.getenv("ML_API_SECRET") and x_api_secret != os.getenv("ML_API_SECRET"):
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    features = extract_features(request.features)
+    features = extract_features(request)
     
     try:
-        miss_prob = adherence_model.predict_proba(features)[0][1]
-    except Exception:
-        miss_prob = calculate_heuristic_risk(request.features)
+        # Check if model is fitted
+        if hasattr(adherence_model, "classes_"):
+            miss_prob = adherence_model.predict_proba(features)[0][1]
+        else:
+            miss_prob = calculate_heuristic_risk(request)
+    except Exception as e:
+        print(f"Prediction error: {e}")
+        miss_prob = calculate_heuristic_risk(request)
     
     if miss_prob < 0.2:
         risk_level = "LOW"
@@ -107,27 +111,24 @@ async def predict_adherence(
         risk_level = "CRITICAL"
     
     risk_factors = []
-    f = request.features
     
-    if f.get("avgAdherence7d", 100) < 70:
-        risk_factors.append("Low adherence this week")
-    if f.get("missRateThisHour", 0) > 0.4:
-        risk_factors.append(f"You often miss {f.get('hour', 12)}:00 doses")
-    if f.get("isWeekend", 0):
-        risk_factors.append("Weekend doses are harder to maintain")
-    if f.get("stockDaysRemaining", 30) < 5:
-        risk_factors.append("Very low stock — refill urgently")
-    if f.get("consecutiveMissed", 0) > 1:
-        risk_factors.append(f"Missed last {f.get('consecutiveMissed')} doses")
+    if request.missed_doses_last_7d >= 3:
+        risk_factors.append("Multiple missed doses in the last 7 days")
+    if request.adherence_streak < 5:
+        risk_factors.append("Short adherence streak")
+    if request.is_weekend:
+        risk_factors.append("Weekend routine changes often affect adherence")
+    if request.stock_days_remaining < 5:
+        risk_factors.append("Very low stock — refill soon")
     
-    recommendation = generate_recommendation(risk_level, risk_factors, f)
+    recommendation = generate_recommendation(risk_level, risk_factors, {"hour": request.hour_of_day})
     
     return {
         "missRisk": round(float(miss_prob), 3),
         "riskLevel": risk_level,
         "riskFactors": risk_factors,
         "recommendation": recommendation,
-        "confidence": 0.78 if len(risk_factors) > 0 else 0.6
+        "confidence": 0.85 if hasattr(adherence_model, "classes_") else 0.6
     }
 
 @app.post("/log-dose")
@@ -167,22 +168,42 @@ async def retrain_model(
     try:
         if not os.path.isfile("data/training_data.csv"):
             return {"status": "no_data"}
+        
         df = pd.read_csv("data/training_data.csv")
         
         if len(df) < 100:
             return {"status": "insufficient_data", "records": len(df)}
         
-        X = df[["hour","dayOfWeek","isWeekend"]].values
-        y = df["status"].values
+        # Features used for training (all except the target 'missed')
+        feature_cols = [
+            'age', 'missed_doses_last_7d', 'frequency', 'has_chronic_condition', 
+            'adherence_streak', 'hour_of_day', 'is_weekend', 'num_medications', 
+            'days_since_start', 'stock_days_remaining'
+        ]
+        
+        X = df[feature_cols].values
+        y = df["missed"].values
         
         global adherence_model
-        adherence_model = GradientBoostingClassifier(n_estimators=100)
+        # Using GradientBoosting for better accuracy on this structured data
+        adherence_model = GradientBoostingClassifier(
+            n_estimators=100, 
+            learning_rate=0.1,
+            max_depth=4,
+            random_state=42
+        )
         adherence_model.fit(X, y)
         
         joblib.dump(adherence_model, "models/adherence_model.pkl")
         
-        return {"status": "retrained", "records": len(df)}
+        return {
+            "status": "retrained", 
+            "records": len(df),
+            "model_type": "GradientBoostingClassifier",
+            "features": feature_cols
+        }
     except Exception as e:
+        print(f"Retrain error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
@@ -11,8 +11,12 @@ import { Eye, EyeOff, Pill, Activity, Shield } from 'lucide-react';
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuthStore();
+  const searchParams = useSearchParams();
+  const initialRole = searchParams.get('role') === 'caregiver' ? 'caregiver' : 'patient';
+  
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const [role, setRole] = useState<'patient' | 'caregiver'>(initialRole);
   const [form, setForm] = useState({ email: '', password: '' });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,6 +86,24 @@ export default function LoginPage() {
             <h2 className="text-3xl font-bold text-foreground mb-2">Welcome back</h2>
             <p className="text-muted text-base mb-8">Sign in to your account to continue</p>
 
+            {/* Role Switcher */}
+            <div className="flex p-1 bg-secondary/20 rounded-2xl mb-8">
+              <button 
+                type="button"
+                onClick={() => setRole('patient')}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${role === 'patient' ? 'bg-white text-primary shadow-sm' : 'text-muted hover:text-foreground'}`}
+              >
+                Patient
+              </button>
+              <button 
+                type="button"
+                onClick={() => setRole('caregiver')}
+                className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${role === 'caregiver' ? 'bg-white text-primary shadow-sm' : 'text-muted hover:text-foreground'}`}
+              >
+                Caregiver
+              </button>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label className="label text-foreground font-semibold mb-1.5 block">Email address</label>
@@ -142,10 +164,16 @@ export default function LoginPage() {
 
             {/* Demo credentials */}
             <div className="mt-6 p-4 bg-secondary/10 rounded-2xl border border-secondary/30">
-              <p className="text-sm text-primary-dark font-medium flex items-center justify-center space-x-2">
-                <span>✨</span>
-                <span>Demo: use any email — register first!</span>
-              </p>
+              <div className="text-sm text-primary-dark font-medium space-y-1">
+                <p className="flex justify-between">
+                  <span>Patient:</span>
+                  <span className="font-bold">sunita@gmail.com / Sunita@123</span>
+                </p>
+                <p className="flex justify-between">
+                  <span>Caregiver:</span>
+                  <span className="font-bold">anil@gmail.com / Anil@123</span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
