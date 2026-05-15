@@ -1,108 +1,113 @@
-# MediSaathi 🏥 — Your Personal Medical Companion
+# MediSaathi 🏥 — Your Premium AI-First Healthcare Companion
 
-MediSaathi is a premium, AI-first healthcare platform designed to empower elderly patients and their caregivers. It simplifies medication management through advanced OCR prescription scanning, AI-driven drug interaction safety checks, and predictive adherence monitoring.
+MediSaathi is a sophisticated, AI-driven healthcare ecosystem designed to empower elderly patients and provide peace of mind to their caregivers. By bridging advanced Machine Learning with a warm, accessible user interface, MediSaathi transforms complex medication management into a seamless, automated experience.
 
 ---
 
 ## 🌟 Key Features
 
-### 1. 👁️ AI Prescription Scanner (OCR)
-Upload any handwritten or printed prescription. Using **Google Gemini 1.5 Flash**, the system extracts medicine names, dosages, and schedules with high precision, eliminating manual entry errors.
+### 1. 👁️ Live AI Prescription Scanner (WebRTC + OCR)
+Experience real-time medical digitization. Our scanner uses a **Live WebRTC Camera** interface with professional scanning overlays to capture prescriptions. Using **Google Gemini 1.5 Flash**, the system extracts medicine names, dosages, and schedules with near-perfect accuracy.
 
-### 2. 🛡️ Drug Interaction Guardrail
-Before adding a new medication, our AI analyzes your entire medical profile to detect potential **Drug-Drug Interactions (DDI)**, ensuring your safety with every new dose.
+### 2. 🛡️ Caregiver Monitoring System
+Bridge the gap between generations. Patients can invite caregivers (family members or doctors) to monitor their adherence in real-time. Caregivers receive instant alerts for missed doses and can track recovery progress via a dedicated dashboard.
 
-### 3. 🧠 Predictive Adherence (ML)
-A dedicated **FastAPI Machine Learning service** analyzes your dose patterns (Taken vs. Missed) to predict high-risk periods. It provides personalized micro-interventions to keep you on track.
+### 3. 🧠 Predictive Adherence Micro-service
+Powered by a **FastAPI Machine Learning service**, MediSaathi doesn't just track history—it predicts the future. By analyzing past dose patterns (Taken vs. Missed), the AI identifies high-risk periods and triggers preventative micro-interventions.
 
-### 4. 📞 Emergency AI Escalation (Twilio)
-If a critical dose is missed, MediSaathi doesn't just send a notification. It triggers an **automated AI voice call** to your primary emergency contact via Twilio to ensure immediate intervention.
+### 4. 📞 Critical AI Voice Escalation (Twilio)
+When safety is at stake, a notification isn't enough. If a high-priority dose is missed, MediSaathi initiates an **automated AI voice call** to emergency contacts via Twilio, ensuring immediate human intervention.
 
-### 5. 👵 Elderly-Centric Design
-Featuring a high-contrast, warm aesthetic, large typography, and **multilingual support (Hindi/English)** to make healthcare accessible for everyone.
-
----
-
-## 🏗️ Tech Stack
-
-- **Frontend/Core**: Next.js 14, Tailwind CSS, Framer Motion, Lucide React.
-- **Backend**: Next.js API Routes (Node.js).
-- **ML Service**: Python FastAPI, Scikit-Learn, Pandas.
-- **Database**: MongoDB (Mongoose).
-- **AI Models**: Google Gemini 1.5 Flash.
-- **Storage**: Cloudinary (Prescription images).
-- **Communication**: Twilio (Automated Voice Calls).
+### 5. 👵 Elderly-Centric Design System
+A high-fidelity interface featuring:
+- **Glassmorphic Aesthetics**: Modern, premium feel with vibrant, accessible color palettes.
+- **Multilingual Support**: Seamlessly switch between **Hindi and English**.
+- **Large Typography**: Optimized for visual clarity for elderly users.
 
 ---
 
-## 🚀 Getting Started
+## 🏗️ Project Architecture
 
-### 1. Clone & Install
-```bash
-git clone <your-repo-url>
-cd medisathi
+```text
+medisathi/
+├── apps/
+│   ├── web/           # Next.js 14 Frontend & API Core (Node.js)
+│   └── ml-api/        # Python FastAPI ML Micro-service
+├── docker-compose.yml # Full-stack containerization
+└── README.md
 ```
 
-### 2. Configure Environment Variables
-Create a `.env.local` in the root and `apps/web/` directory:
+---
+
+## 🚀 Installation & Local Development
+
+### 1. Prerequisites
+- Node.js 18+ & npm
+- Python 3.9+
+- MongoDB Instance (Atlas or Local)
+- Cloudinary Account (for image processing)
+
+### 2. Environment Setup
+Create a `.env.local` in `apps/web/` and configure the following:
+
 ```bash
-# Database
+# Core
 MONGODB_URI="your_mongodb_uri"
+NEXTAUTH_SECRET="your_secret"
 
 # AI & Media
-GEMINI_API_KEY="your_gemini_key"
+GEMINI_API_KEY="your_gemini_api_key"
 CLOUDINARY_CLOUD_NAME="your_cloud_name"
 CLOUDINARY_API_KEY="your_api_key"
 CLOUDINARY_API_SECRET="your_api_secret"
 
-# ML Communication
+# ML & Integrations
 ML_API_URL="http://localhost:8000"
-ML_API_SECRET="local-dev-secret-key"
-
-# Emergency Calls (Twilio)
 TWILIO_ACCOUNT_SID="your_sid"
 TWILIO_AUTH_TOKEN="your_token"
-TWILIO_PHONE_NUMBER="your_twilio_number"
+TWILIO_PHONE_NUMBER="your_phone_number"
 ```
 
-### 3. Run the Services
+### 3. Running Services
 
-You need two terminals running simultaneously:
-
-**Terminal 1: Next.js (Web & API)**
+**Terminal 1: Web Frontend**
 ```bash
 cd apps/web
 npm install
 npm run dev
 ```
 
-**Terminal 2: Python (ML API)**
+**Terminal 2: ML API**
 ```bash
 cd apps/ml-api
 python -m venv venv
-# Windows:
-.\venv\Scripts\activate
-# Mac/Linux:
-source venv/bin/activate
-
+# Activate venv: .\venv\Scripts\activate (Windows) or source venv/bin/activate (Mac/Linux)
 pip install -r requirements.txt
-uvicorn main:app --reload
+uvicorn main:app --port 8000
 ```
 
 ---
 
-## 🧪 Testing the Platform
+## 🌍 Deployment Strategy
 
-1.  **Seed Data**: Populate the database with a test user "Sunita Devi":
-    ```bash
-    cd apps/web
-    node src/seed/seed.js
-    ```
-2.  **Login**: Use the seeded credentials:
-    - **Email**: `sunita@gmail.com`
-    - **Password**: `Sunita@123`
-3.  **Scan**: Upload a prescription image in the "Scan Rx" section.
-4.  **Log**: Mark a dose as "Taken" or "Missed" and check the ML logs in `apps/ml-api/data/training_data.csv`.
+### Frontend (Netlify)
+MediSaathi is optimized for Netlify deployment using a Monorepo configuration:
+- **Base Directory**: `apps/web`
+- **Build Command**: `npm run build`
+- **Publish Directory**: `.next`
+- **Environment Variables**: Mirror your `.env.local` in the Netlify Dashboard.
+
+### ML Service (Render / Railway)
+The Python micro-service should be deployed to a container-friendly host:
+- **Command**: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+- **Link**: Update the `ML_API_URL` in your Next.js environment to point to this deployed URL.
+
+---
+
+## 🧪 Testing
+1. **Seed Data**: Run `node src/seed/seed.js` inside `apps/web` to create the default patient "Sunita Devi".
+2. **Login**: Use `sunita@gmail.com` / `Sunita@123`.
+3. **Scan**: Try the "Live AI Scanner" with a sample prescription.
 
 ---
 
