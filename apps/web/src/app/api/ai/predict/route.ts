@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     // 2. Call ML API
     const mlApiUrl = process.env.ML_API_URL || 'http://localhost:8000';
     try {
-      const response = await fetch(`${mlApiUrl}/predict`, {
+      const response = await fetch(`${mlApiUrl}/api/v1/predict/adherence-risk`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

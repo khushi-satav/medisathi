@@ -1,4 +1,3 @@
-from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel
 from typing import Optional, List
 import pandas as pd
@@ -8,6 +7,18 @@ import joblib
 import os
 from datetime import datetime
 import csv
+import io
+from fastapi import FastAPI, HTTPException, Header, File, UploadFile
+from paddleocr import PaddleOCR
+import cv2
+
+# Initialize PaddleOCR (English and Hindi support)
+try:
+    # use_textline_orientation is the replacement for deprecated use_angle_cls
+    ocr = PaddleOCR(use_textline_orientation=True, lang='en', show_log=False)
+except Exception as e:
+    print(f"Failed to initialize PaddleOCR: {e}")
+    ocr = None
 
 app = FastAPI(title="MediSaathi ML API")
 
@@ -81,7 +92,7 @@ def generate_recommendation(level: str, factors: list, features: dict) -> str:
     else:
         return "Critical risk. Please take your medication immediately and contact your caregiver."
 
-@app.post("/predict")
+@app.post("/api/v1/predict/adherence-risk")
 async def predict_adherence(
     request: PredictionRequest,
     x_api_secret: str = Header(None, alias="X-API-Secret")
@@ -209,6 +220,74 @@ async def retrain_model(
 @app.get("/health")
 async def health():
     return {"status": "ok", "model_ready": adherence_model is not None}
+
+@app.post("/scan-prescription")
+async def scan_prescription(
+    file: UploadFile = File(...),
+    x_api_secret: str = Header(None, alias="X-API-Secret")
+):
+    if os.getenv("ML_API_SECRET") and x_api_secret != os.getenv("ML_API_SECRET"):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    if not ocr:
+        return {
+            "success": False,
+            "error": "OCR engine not initialized",
+            "medicines": []
+        }
+
+    try:
+        # Read file
+        contents = await file.read()
+        nparr = np.frombuffer(contents, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        # Run OCR
+        result = ocr.ocr(img, cls=True)
+        
+        raw_text = []
+        if result and result[0]:
+            for line in result[0]:
+                raw_text.append(line[1][0])
+        
+        # Simple extraction logic (can be improved)
+        medicines = []
+        # Keywords to look for
+        med_keywords = ["tablet", "tab", "capsule", "cap", "mg", "ml", "syrup", "syp"]
+        
+        for i, text in enumerate(raw_text):
+            text_lower = text.lower()
+            if any(k in text_lower for k in med_keywords):
+                # Try to extract medicine name (usually the line itself or previous line)
+                med_name = text
+                dosage = ""
+                # Simple logic: if 'mg' in text, it's likely dosage
+                if "mg" in text_lower:
+                    parts = text.split()
+                    for p in parts:
+                        if "mg" in p.lower():
+                            dosage = p
+                
+                medicines.append({
+                    "name": med_name,
+                    "dosage": dosage,
+                    "confidence": 0.8,
+                    "form": "tablet" if "tab" in text_lower else "capsule" if "cap" in text_lower else "syrup"
+                })
+
+        return {
+            "success": True,
+            "raw_text": raw_text,
+            "medicines": medicines[:5], # Limit for now
+            "total_lines": len(raw_text)
+        }
+    except Exception as e:
+        print(f"OCR Error: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "medicines": []
+        }
 
 if __name__ == "__main__":
     import uvicorn

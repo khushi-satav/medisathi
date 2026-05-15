@@ -71,7 +71,7 @@ export async function logDoseToML(data: {
   dayOfWeek: number;
 }): Promise<void> {
   try {
-    await fetch(`${ML_API_URL}/api/v1/log-dose`, {
+    await fetch(`${ML_API_URL}/log-dose`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -127,7 +127,7 @@ export async function scanPrescription(
  */
 export async function checkMLHealth(): Promise<{ healthy: boolean; modelsReady: boolean; version?: string }> {
   try {
-    const res = await fetch(`${ML_API_URL}/api/v1/health`, {
+    const res = await fetch(`${ML_API_URL}/health`, {
       signal: AbortSignal.timeout(3000),
     });
     if (!res.ok) return { healthy: false, modelsReady: false };

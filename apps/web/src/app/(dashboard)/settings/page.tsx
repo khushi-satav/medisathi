@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
-import { authService } from '@/services/api';
+import { authService, api } from '@/services/api';
 import { User, Bell, Shield, Smartphone, Save, LogOut, ChevronDown, Activity, Calendar, Utensils, Smile } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
@@ -35,6 +35,16 @@ export default function SettingsPage() {
   });
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [caregiverEmail, setCaregiverEmail] = useState('');
+
+  const inviteMutation = useMutation({
+    mutationFn: (data: { email: string }) => api.post('/caregiver/invite', data),
+    onSuccess: () => {
+      toast.success('Caregiver linked successfully!');
+      setCaregiverEmail('');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.error || 'Failed to link caregiver'),
+  });
 
   const saveMutation = useMutation({
     mutationFn: (data: any) => authService.updateMe(data),
@@ -273,9 +283,42 @@ export default function SettingsPage() {
                   <p className="text-white/80 text-sm mt-1">Get real Twilio SMS reminders on your phone</p>
                 </div>
               </div>
-              <button className="bg-white text-primary font-semibold mt-6 w-full py-3 rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
-                Add Phone Number →
-              </button>
+              
+              {!user?.phone ? (
+                <div className="mt-6 flex flex-col gap-3">
+                  <input 
+                    type="tel" 
+                    placeholder="+91 9876543210" 
+                    value={profile.phone}
+                    onChange={(e) => setProfile({...profile, phone: e.target.value})}
+                    className="w-full px-4 py-3 rounded-xl text-slate-800 outline-none"
+                  />
+                  <button 
+                    onClick={handleSave}
+                    disabled={saveMutation.isPending}
+                    className="bg-white text-primary font-semibold w-full py-3 rounded-xl hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+                  >
+                    {saveMutation.isPending ? 'Saving...' : 'Save & Enable →'}
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-6 flex flex-col gap-3">
+                  <div className="bg-white/20 px-4 py-3 rounded-xl font-medium flex justify-between items-center">
+                    <span>{user.phone}</span>
+                    <span className="text-xs bg-emerald-500 px-2 py-1 rounded text-white shadow-sm border border-emerald-400">Active</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        saveMutation.mutate({ ...profile, phone: undefined });
+                      }}
+                      className="text-white/80 text-sm hover:text-white underline"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -297,6 +340,28 @@ export default function SettingsPage() {
                 onClick={() => toast('Sharing toggled!', { icon: '🔄' })}>
                 <span className="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform left-5.5" />
               </button>
+            </div>
+
+            <div className="p-5 rounded-xl border border-slate-100 bg-slate-50 mb-6">
+              <h4 className="text-sm font-semibold text-slate-800 mb-1">Invite Caregiver</h4>
+              <p className="text-xs text-slate-500 mb-4">Add a family member or caretaker to monitor your doses and receive alerts.</p>
+              
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input 
+                  type="email" 
+                  placeholder="caregiver@email.com" 
+                  value={caregiverEmail}
+                  onChange={(e) => setCaregiverEmail(e.target.value)}
+                  className="flex-1 appearance-none bg-white border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary font-medium text-sm"
+                />
+                <button 
+                  className="btn-primary text-sm py-2.5 px-6 whitespace-nowrap disabled:opacity-50" 
+                  disabled={!caregiverEmail || inviteMutation.isPending}
+                  onClick={() => inviteMutation.mutate({ email: caregiverEmail })}
+                >
+                  {inviteMutation.isPending ? 'Sending...' : 'Invite'}
+                </button>
+              </div>
             </div>
 
             <div className="p-5 rounded-xl border border-slate-100 bg-slate-50 mb-8">

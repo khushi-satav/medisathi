@@ -53,31 +53,16 @@ export async function POST(req: NextRequest) {
       { upsert: true, new: true }
     );
 
-<<<<<<< HEAD
-    // --- MODIFICATION: Sync with ML API ---
-    try {
-      const mlApiUrl = process.env.ML_API_URL || 'http://localhost:8000';
-      const scheduledTimeDate = new Date(scheduledTime);
-      
-      await fetch(`${mlApiUrl}/log-dose`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-API-Secret': process.env.ML_API_SECRET || ''
-        },
-        body: JSON.stringify({
-          userId: user.id,
-          medicationId,
-          status: status.toUpperCase(),
-          scheduledTime: scheduledTime,
-          hour: scheduledTimeDate.getHours(),
-          dayOfWeek: scheduledTimeDate.getDay()
-        })
-      });
-      console.log('✅ Dose logged to ML API');
-    } catch (mlErr) {
-      console.error('⚠️ ML API Sync failed:', mlErr);
-    }
+    // Fire-and-forget: send dose data to ML API for retraining
+    const scheduledDt = new Date(scheduledTime);
+    logDoseToML({
+      userId: user.id,
+      medicationId,
+      status,
+      scheduledTime,
+      hour: scheduledDt.getHours(),
+      dayOfWeek: scheduledDt.getDay(),
+    });
 
     // --- MODIFICATION: Escalation on Missed Dose ---
     if (status === 'missed' || status === 'overdue') {
@@ -96,18 +81,6 @@ export async function POST(req: NextRequest) {
         console.error('⚠️ Escalation trigger failed:', escErr);
       }
     }
-=======
-    // Fire-and-forget: send dose data to ML API for retraining
-    const scheduledDt = new Date(scheduledTime);
-    logDoseToML({
-      userId: user.id,
-      medicationId,
-      status,
-      scheduledTime,
-      hour: scheduledDt.getHours(),
-      dayOfWeek: scheduledDt.getDay(),
-    });
->>>>>>> dd72bdc (Added OCR backend and medicine parser)
 
     return NextResponse.json({ log, stats });
   } catch (error: any) {

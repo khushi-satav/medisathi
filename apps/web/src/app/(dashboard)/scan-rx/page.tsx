@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { prescriptionsService } from '@/services/api';
 import { Upload, Scan, FileText, CheckCircle2, Plus, X, Loader2, Camera, FlaskConical, ShieldCheck, Brain, Zap, Globe, Eye, ChevronRight, AlertTriangle, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
+import CameraModal from '@/components/shared/CameraModal';
 
 type ExtractedMed = {
   name: string; dosage: string; frequency: string;
@@ -44,6 +45,7 @@ export default function ScanRxPage() {
   const [dragOver, setDragOver] = useState(false);
   const [fdaData, setFdaData] = useState<any | null>(null);
   const [fetchingFda, setFetchingFda] = useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const { data: rxData } = useQuery({ queryKey: ['prescriptions'], queryFn: () => prescriptionsService.getAll() });
   const prescriptions = rxData?.data?.prescriptions ?? [];
@@ -212,11 +214,24 @@ export default function ScanRxPage() {
               Browse Files
               <ChevronRight size={14} className="ml-auto text-slate-400" />
             </button>
-            <button onClick={() => { if (typeof window !== 'undefined') { fileRef.current && (fileRef.current.capture = 'environment'); fileRef.current?.click(); }}} disabled={uploading}
+            <button onClick={() => setIsCameraOpen(true)} disabled={uploading}
               className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:bg-purple-50 hover:border-purple-300 transition-all text-sm font-semibold text-slate-700 shadow-sm">
               <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center"><Camera size={16} className="text-purple-600" /></div>
               Open Camera
-              <ChevronRight size={14} className="ml-auto text-slate-400" />
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-[10px] bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-md font-bold">WBRCT</span>
+                <ChevronRight size={14} className="text-slate-400" />
+              </div>
+            </button>
+            <button onClick={() => setIsCameraOpen(true)} disabled={uploading}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl border border-secondary/30 bg-secondary/5 hover:bg-secondary/10 hover:border-secondary transition-all text-sm font-semibold text-slate-700 shadow-sm relative overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-8 h-8 rounded-lg bg-secondary/30 flex items-center justify-center relative z-10"><Camera size={16} className="text-primary" /></div>
+              <span className="relative z-10">Live AI Scanner</span>
+              <div className="ml-auto flex items-center gap-2 relative z-10">
+                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-md font-bold animate-pulse">WBRCT</span>
+                <ChevronRight size={14} className="text-slate-400" />
+              </div>
             </button>
             <button onClick={loadDemo} disabled={uploading}
               className="flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-all text-sm font-semibold text-emerald-700 shadow-sm">
@@ -410,6 +425,14 @@ export default function ScanRxPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Camera Modal */}
+      {isCameraOpen && (
+        <CameraModal 
+          onCapture={handleFile}
+          onClose={() => setIsCameraOpen(false)}
+        />
       )}
     </div>
   );
