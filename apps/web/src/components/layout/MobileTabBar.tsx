@@ -14,11 +14,10 @@ const patientTabs = [
   { href: '/settings',     label: 'Settings', icon: Settings },
 ];
 
-import { Users, Activity } from 'lucide-react';
+import { Users } from 'lucide-react';
 const caregiverTabs = [
   { href: '/dashboard',       label: 'Home',      icon: Home },
   { href: '/caregiver',       label: 'Patients',  icon: Users, center: true },
-  { href: '/messages',        label: 'Messages',  icon: Activity },
   { href: '/settings',        label: 'Settings',  icon: Settings },
 ];
 

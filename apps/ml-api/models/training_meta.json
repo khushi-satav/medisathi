@@ -1,0 +1,16 @@
+{
+  "trained_at": "2026-05-26 22:49:01",
+  "models_trained": [
+    "spell_corrector.pkl",
+    "medicine_vocab.pkl",
+    "adherence_model.pkl",
+    "risk_model.pkl"
+  ],
+  "vocabulary_sources": {
+    "medicine_names": "C:\\Users\\admin\\medisathi\\apps\\ml-api\\Medical-Prescription-OCR\\Medical-Prescription-OCR\\Model-5\\all_medicine_names.txt",
+    "medical_terms": "C:\\Users\\admin\\medisathi\\apps\\ml-api\\Medical-Prescription-OCR\\Medical-Prescription-OCR\\Model-5\\all_medical_terms.txt",
+    "medicine_data": "C:\\Users\\admin\\medisathi\\apps\\ml-api\\Medical-Prescription-OCR\\Medical-Prescription-OCR\\Model-5\\total_medicine_data.txt"
+  },
+  "pipeline_version": "2.0.0",
+  "notes": "Trained with Medical-Prescription-OCR vocabulary + PaddleOCR backend"
+}

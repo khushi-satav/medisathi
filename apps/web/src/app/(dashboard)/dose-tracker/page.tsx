@@ -29,6 +29,20 @@ function dateLabel(d: Date) {
   return d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' });
 }
 
+function formatScheduledTime(isoString: string) {
+  if (!isoString) return '';
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch (e) {
+    return isoString;
+  }
+}
+
 export default function DoseTrackerPage() {
   const qc = useQueryClient();
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -148,9 +162,10 @@ export default function DoseTrackerPage() {
                 </div>
                 <div className="space-y-3">
                   {(items as any[]).map((dose: any) => {
-                    const isSkipping = skippingId === dose._id;
+                    const uniqueDoseId = `${dose.medicationId}-${dose.scheduledTime}`;
+                    const isSkipping = skippingId === uniqueDoseId;
                     return (
-                      <div key={dose._id}
+                      <div key={uniqueDoseId}
                         className={`rounded-2xl border p-4 transition-all ${meta.bg} ${meta.border}`}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-4">
@@ -158,10 +173,10 @@ export default function DoseTrackerPage() {
                               <Pill size={20} className={meta.text} />
                             </div>
                             <div>
-                              <p className="font-bold text-slate-800">{dose.medicationName}</p>
+                              <p className="font-bold text-slate-800">{dose.medicationName || dose.name}</p>
                               <p className="text-xs text-slate-500 flex items-center mt-0.5">
                                 <Clock size={11} className="mr-1" />
-                                {dose.scheduledTime} · {dose.dosage}
+                                {formatScheduledTime(dose.scheduledTime)} · {dose.dosage}
                               </p>
                               {dose.takenAt && (
                                 <p className="text-xs text-emerald-600 mt-0.5">
@@ -175,7 +190,7 @@ export default function DoseTrackerPage() {
                           {['pending', 'overdue', 'upcoming'].includes(dose.status) && !isSkipping && (
                             <div className="flex space-x-2">
                               <button
-                                onClick={() => setSkippingId(dose._id)}
+                                onClick={() => setSkippingId(uniqueDoseId)}
                                 className="btn-secondary text-xs py-1.5 px-3 flex items-center space-x-1">
                                 <SkipForward size={13} /><span>Skip</span>
                               </button>

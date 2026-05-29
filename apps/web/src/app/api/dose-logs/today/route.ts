@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
         schedule.push({
           medicationId: med._id,
           name: med.name,
+          medicationName: med.name,
           dosage: med.dosage,
           form: med.form,
           time,
@@ -65,9 +66,10 @@ export async function GET(req: NextRequest) {
     schedule.sort((a, b) => a.time.localeCompare(b.time));
 
     // Summary stats
+    const pastOrTakenSchedule = schedule.filter(s => s.status !== 'upcoming' && s.status !== 'pending');
     const taken = schedule.filter(s => s.status === 'taken').length;
     const missed = schedule.filter(s => s.status === 'missed' || s.status === 'overdue').length;
-    const total = schedule.length;
+    const total = pastOrTakenSchedule.length;
     const adherenceRate = total > 0 ? Math.round((taken / total) * 100) : 100;
 
     return NextResponse.json({ schedule, date, stats: { taken, missed, total, adherenceRate } });

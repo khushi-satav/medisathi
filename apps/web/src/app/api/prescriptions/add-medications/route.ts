@@ -16,6 +16,10 @@ export async function POST(req: NextRequest) {
     const prescription = await Prescription.findOne({ _id: prescriptionId, userId: user.id });
     if (!prescription) return NextResponse.json({ error: 'Prescription not found' }, { status: 404 });
 
+    if (prescription.status === 'added') {
+      return NextResponse.json({ error: 'Medications from this prescription have already been added' }, { status: 400 });
+    }
+
     const medicines = selectedMedicines || prescription.aiExtracted?.medicines || [];
     
     // --- MODIFICATION: Drug Interaction Check ---
@@ -25,7 +29,7 @@ export async function POST(req: NextRequest) {
     if (existingMeds.length > 0 && medicines.length > 0 && process.env.GEMINI_API_KEY) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
         
         const existingNames = existingMeds.map(m => m.name).join(', ');
         const newNames = medicines.map((m: any) => m.name).join(', ');
@@ -47,24 +51,72 @@ export async function POST(req: NextRequest) {
     const created = [];
 
     for (const med of medicines) {
-      const medication = await Medication.create({
+      if (!med.name) continue;
+      
+      const cleanName = med.name.trim();
+      
+      // Look for an existing medication (case-insensitive check)
+      const existingMed = await Medication.findOne({
         userId: user.id,
-        name: med.name,
-        genericName: med.genericName,
-        dosage: med.dosage,
-        form: med.form || 'tablet',
-        times: med.times || ['08:00'],
-        foodInstruction: med.foodInstruction || 'after_meal',
-        startDate: new Date(),
-        stockCount: med.quantity || 30,
-        isOngoing: true,
-        addedByOCR: true,
-        specialInstructions: med.specialInstructions,
-        prescriptionId: prescription._id,
-        interactions: med.interactions || [],
-        sideEffects: med.sideEffects || [],
+        name: { $regex: new RegExp("^" + cleanName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + "$", "i") }
       });
-      created.push(medication);
+
+      if (existingMed) {
+        // Update/reactivate the existing medication instead of creating a duplicate
+        existingMed.isActive = true;
+        
+        // Merge scheduled times
+        const allTimes = new Set([...(existingMed.times || []), ...(med.times || ['08:00'])]);
+        existingMed.times = Array.from(allTimes).sort();
+        
+        // Update stock: add new quantity to existing stock
+        const newQty = Number(med.quantity) || 30;
+        existingMed.stockCount = Math.max(0, existingMed.stockCount || 0) + newQty;
+        
+        // Update other details from OCR if provided, preserving existing ones if not
+        if (med.genericName) existingMed.genericName = med.genericName;
+        if (med.dosage) existingMed.dosage = med.dosage;
+        if (med.form) existingMed.form = med.form;
+        if (med.foodInstruction) existingMed.foodInstruction = med.foodInstruction;
+        if (med.specialInstructions) existingMed.specialInstructions = med.specialInstructions;
+        
+        // Update prescription ID association
+        existingMed.prescriptionId = prescription._id;
+        existingMed.addedByOCR = true;
+        existingMed.isOngoing = true;
+        
+        // Merge interactions and side effects lists
+        if (med.interactions && med.interactions.length > 0) {
+          existingMed.interactions = Array.from(new Set([...(existingMed.interactions || []), ...med.interactions]));
+        }
+        if (med.sideEffects && med.sideEffects.length > 0) {
+          existingMed.sideEffects = Array.from(new Set([...(existingMed.sideEffects || []), ...med.sideEffects]));
+        }
+        
+        existingMed.updatedAt = new Date();
+        await existingMed.save();
+        created.push(existingMed);
+      } else {
+        // Create new medication
+        const medication = await Medication.create({
+          userId: user.id,
+          name: cleanName,
+          genericName: med.genericName,
+          dosage: med.dosage,
+          form: med.form || 'tablet',
+          times: med.times || ['08:00'],
+          foodInstruction: med.foodInstruction || 'after_meal',
+          startDate: new Date(),
+          stockCount: med.quantity || 30,
+          isOngoing: true,
+          addedByOCR: true,
+          specialInstructions: med.specialInstructions,
+          prescriptionId: prescription._id,
+          interactions: med.interactions || [],
+          sideEffects: med.sideEffects || [],
+        });
+        created.push(medication);
+      }
     }
 
     await Prescription.findByIdAndUpdate(prescriptionId, { status: 'added' });

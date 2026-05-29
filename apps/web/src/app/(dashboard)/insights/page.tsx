@@ -77,7 +77,7 @@ export default function InsightsPage() {
           {/* KPI Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Adherence', value: `${adherencePercentage}%`, sub: `${period}-day rate`, icon: <TrendingUp size={20} />, color: 'bg-secondary/30 text-primary', bold: adherencePercentage >= 80 ? 'text-emerald-600' : adherencePercentage >= 50 ? 'text-amber-600' : 'text-red-600' },
+              { label: 'Adherence', value: totalDoses === 0 ? 'N/A' : `${adherencePercentage}%`, sub: `${period}-day rate`, icon: <TrendingUp size={20} />, color: 'bg-secondary/30 text-primary', bold: totalDoses === 0 ? 'text-slate-500' : (adherencePercentage >= 80 ? 'text-emerald-600' : adherencePercentage >= 50 ? 'text-amber-600' : 'text-red-600') },
               { label: 'Total Doses', value: totalDoses, sub: `in ${period} days`, icon: <BarChart3 size={20} />, color: 'bg-slate-100 text-slate-600', bold: 'text-slate-800' },
               { label: 'Taken', value: takenDoses, sub: `${totalDoses ? Math.round(takenDoses / totalDoses * 100) : 0}% of total`, icon: <CheckCircle2 size={20} />, color: 'bg-emerald-100 text-emerald-600', bold: 'text-emerald-700' },
               { label: 'Missed', value: missedDoses, sub: 'doses missed', icon: <XCircle size={20} />, color: 'bg-red-100 text-red-600', bold: missedDoses > 0 ? 'text-red-600' : 'text-slate-800' },

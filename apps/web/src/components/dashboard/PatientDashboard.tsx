@@ -1,9 +1,10 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { doseLogsService, insightsService, aiService } from '@/services/api';
-import { CheckCircle2, Clock, AlertCircle, Flame, Pill, TrendingUp, ChevronRight, Activity, Users, LogIn } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, Flame, Pill, TrendingUp, ChevronRight, Activity, Users, LogIn, Sparkles, Play, Pause, Volume2, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -14,6 +15,20 @@ function greeting() {
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
+}
+
+function formatScheduledTime(isoString: string) {
+  if (!isoString) return '';
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch (e) {
+    return isoString;
+  }
 }
 
 function AdherenceRing({ pct }: { pct: number }) {
@@ -75,6 +90,187 @@ const itemVariants = {
   hidden: { opacity: 0, y: 15 },
   show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
 };
+
+function AIBriefingCard() {
+  const { user } = useAuthStore();
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const { data: briefing, isLoading, isError, refetch } = useQuery({
+    queryKey: ['daily-briefing'],
+    queryFn: () => aiService.getDailyBriefing().then(res => res.data.briefing),
+    staleTime: 1000 * 60 * 60,
+  });
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handlePlayPause = () => {
+    if (!briefing || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+
+    const synth = window.speechSynthesis;
+
+    if (isPlaying) {
+      if (isPaused) {
+        synth.resume();
+        setIsPaused(false);
+      } else {
+        synth.pause();
+        setIsPaused(true);
+      }
+    } else {
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(briefing);
+      const langMap: Record<string, string> = {
+        en: 'en-IN',
+        hi: 'hi-IN',
+        mr: 'mr-IN',
+        ta: 'ta-IN',
+        te: 'te-IN',
+        bn: 'bn-IN'
+      };
+      u.lang = langMap[user?.language || 'en'] || 'en-IN';
+      u.onend = () => {
+        setIsPlaying(false);
+        setIsPaused(false);
+      };
+      u.onerror = () => {
+        setIsPlaying(false);
+        setIsPaused(false);
+      };
+      synth.speak(u);
+      setIsPlaying(true);
+      setIsPaused(false);
+    }
+  };
+
+  const handleStop = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setIsPlaying(false);
+    setIsPaused(false);
+  };
+
+  const langNames: Record<string, string> = {
+    en: 'English',
+    hi: 'हिंदी (Hindi)',
+    mr: 'मराठी (Marathi)',
+    ta: 'தமிழ் (Tamil)',
+    te: 'తెలుగు (Telugu)',
+    bn: 'বাংলা (Bengali)'
+  };
+  const activeLang = langNames[user?.language || 'en'] || 'English';
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-fuchsia-500/5 dark:from-violet-950/20 dark:via-purple-950/10 dark:to-fuchsia-950/10 backdrop-blur-xl border border-violet-100/80 dark:border-violet-900/30 p-6 md:p-8 shadow-lg hover:shadow-xl transition-all duration-300">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-violet-400/10 rounded-full blur-3xl -z-10 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-400/10 rounded-full blur-2xl -z-10 pointer-events-none" />
+
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2.5">
+          <div className="p-2 bg-violet-600/10 dark:bg-violet-500/20 rounded-xl text-violet-600 dark:text-violet-400 shadow-inner">
+            <Sparkles size={20} className="animate-pulse" />
+          </div>
+          <div>
+            <h3 className="font-bold text-foreground text-lg tracking-tight">AI Daily Briefing</h3>
+            <p className="text-xs text-muted font-medium">{activeLang}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-1">
+          {isPlaying && (
+            <div className="flex items-center space-x-1 mr-2 bg-violet-500/10 px-2.5 py-1 rounded-full border border-violet-500/20">
+              <span className="text-[10px] text-violet-600 dark:text-violet-400 font-bold uppercase tracking-wider animate-pulse mr-1.5">Speaking</span>
+              <div className="flex items-center space-x-0.5 h-3">
+                {[...Array(4)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="w-0.5 bg-violet-500 rounded-full"
+                    animate={{
+                      height: (isPlaying && !isPaused) ? [4, 12, 4] : 4
+                    }}
+                    transition={{
+                      duration: 0.8,
+                      repeat: Infinity,
+                      delay: i * 0.15,
+                      ease: "easeInOut"
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          <button
+            onClick={() => refetch()}
+            disabled={isLoading}
+            className="p-2 text-muted hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800/80 rounded-xl transition-all"
+            title="Refresh briefing"
+          >
+            <RefreshCw size={15} className={`${isLoading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3 py-2">
+          <div className="h-4 bg-muted animate-pulse rounded-lg w-full" />
+          <div className="h-4 bg-muted animate-pulse rounded-lg w-11/12" />
+          <div className="h-4 bg-muted animate-pulse rounded-lg w-10/12" />
+        </div>
+      ) : isError ? (
+        <div className="text-sm text-red-500 bg-red-500/5 border border-red-500/10 rounded-2xl p-4 flex items-center space-x-2">
+          <AlertCircle size={16} />
+          <span>Failed to generate daily briefing. Please try again.</span>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="text-sm md:text-base leading-relaxed text-slate-700 dark:text-slate-300 font-medium">
+            {briefing}
+          </div>
+
+          <div className="flex items-center space-x-3 pt-2">
+            <button
+              onClick={handlePlayPause}
+              className={`flex items-center space-x-2 text-sm font-bold px-4 py-2.5 rounded-xl transition-all duration-200 shadow-sm active:scale-[0.98] ${
+                isPlaying && !isPaused
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                  : 'bg-violet-600 hover:bg-violet-700 text-white'
+              }`}
+            >
+              {isPlaying && !isPaused ? (
+                <>
+                  <Pause size={15} fill="currentColor" />
+                  <span>Pause</span>
+                </>
+              ) : (
+                <>
+                  <Play size={15} fill="currentColor" />
+                  <span>Listen Briefing</span>
+                </>
+              )}
+            </button>
+
+            {isPlaying && (
+              <button
+                onClick={handleStop}
+                className="text-xs font-bold text-slate-500 hover:text-red-500 px-3 py-2 rounded-xl hover:bg-red-500/5 transition-all border border-transparent hover:border-red-500/10"
+              >
+                Stop
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PatientDashboard() {
   const { user } = useAuthStore();
@@ -150,7 +346,7 @@ export default function PatientDashboard() {
                     <div className="mt-4 flex items-center bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2 w-fit border border-white/20">
                       <Clock size={16} className="text-white/90 mr-2" />
                       <p className="text-white text-sm font-medium">
-                        Next: <span className="font-bold">{upcoming[0].medicationName}</span> at {upcoming[0].scheduledTime}
+                        Next: <span className="font-bold">{upcoming[0].medicationName || upcoming[0].name}</span> at {formatScheduledTime(upcoming[0].scheduledTime)}
                       </p>
                     </div>
                   ) : (
@@ -224,18 +420,20 @@ export default function PatientDashboard() {
             ) : (
               <div className="space-y-4">
                 <AnimatePresence>
-                  {schedule.slice(0, 6).map((dose: any, i: number) => (
-                    <motion.div 
-                      key={dose._id}
-                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                      className={`group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border transition-all hover:shadow-md ${STATUS_COLORS[dose.status] || 'bg-card border-border hover:border-primary/30'}`}
-                    >
+                  {schedule.slice(0, 6).map((dose: any, i: number) => {
+                    const uniqueDoseId = `${dose.medicationId}-${dose.scheduledTime}`;
+                    return (
+                      <motion.div 
+                        key={uniqueDoseId}
+                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                        className={`group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border transition-all hover:shadow-md ${STATUS_COLORS[dose.status] || 'bg-card border-border hover:border-primary/30'}`}
+                      >
                       <div className="flex items-start sm:items-center space-x-4 mb-4 sm:mb-0">
                         <div className={`mt-1 sm:mt-0 w-3.5 h-3.5 rounded-full shrink-0 ${DOT_COLORS[dose.status] || 'bg-muted'}`} />
                         <div>
-                          <p className="font-bold text-foreground text-lg">{dose.medicationName}</p>
+                          <p className="font-bold text-foreground text-lg">{dose.medicationName || dose.name}</p>
                           <div className="flex flex-wrap items-center gap-y-1 gap-x-3 text-sm text-muted font-medium mt-1">
-                            <span className="flex items-center text-foreground bg-background px-2.5 py-0.5 rounded-md border border-border shadow-sm"><Clock size={14} className="mr-1.5 text-primary" /> {dose.scheduledTime}</span>
+                            <span className="flex items-center text-foreground bg-background px-2.5 py-0.5 rounded-md border border-border shadow-sm"><Clock size={14} className="mr-1.5 text-primary" /> {formatScheduledTime(dose.scheduledTime)}</span>
                             <span>•</span>
                             <span>{dose.dosage}</span>
                             {dose.foodInstruction && (
@@ -262,7 +460,8 @@ export default function PatientDashboard() {
                         )}
                       </div>
                     </motion.div>
-                  ))}
+                  );
+                })}
                 </AnimatePresence>
               </div>
             )}
@@ -271,6 +470,7 @@ export default function PatientDashboard() {
 
         {/* Right column */}
         <div className="space-y-6 md:space-y-8 flex flex-col h-full">
+          <AIBriefingCard />
           {/* Weekly adherence */}
           <div className="bg-card rounded-3xl shadow-card border border-border p-6 md:p-8">
             <h3 className="font-bold text-foreground text-xl mb-6">Weekly Adherence</h3>

@@ -52,6 +52,16 @@ export async function POST(req: NextRequest) {
       console.error('Risk fetch for briefing failed:', err);
     }
 
+    const languageNames: Record<string, string> = {
+      en: 'English',
+      hi: 'Hindi',
+      mr: 'Marathi',
+      ta: 'Tamil',
+      te: 'Telugu',
+      bn: 'Bengali'
+    };
+    const targetLang = languageNames[user.language as string] || 'English';
+
     const prompt = `Generate a brief, encouraging daily medication briefing for this patient:
 - Name: ${user.name}
 - Today's doses: ${JSON.stringify(dosesSummary)}
@@ -61,7 +71,8 @@ export async function POST(req: NextRequest) {
 
 Keep it under 80 words. Use simple, warm language. 
 If adherence is low or risk is HIGH, be motivating but firm about safety.
-Include: what to take next, timing reminder, one encouragement line.`;
+Include: what to take next, timing reminder, one encouragement line.
+IMPORTANT: You MUST write the entire response in ${targetLang}. All text, greetings, and labels must be written in the ${targetLang} language and its native script (e.g. Devanagari script for Hindi/Marathi, Tamil script for Tamil, etc.). Do not write in transliterated/romanized format, write in the native script.`;
 
     const briefing = await generateText(prompt);
 

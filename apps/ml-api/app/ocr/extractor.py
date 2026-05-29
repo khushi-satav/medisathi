@@ -1,7 +1,10 @@
+import os
+os.environ["PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT"] = "0"
+
 from paddleocr import PaddleOCR
 
 ocr = PaddleOCR(
-    use_angle_cls=False,
+    use_textline_orientation=True,
     lang='en'
 )
 
@@ -21,16 +24,25 @@ def extract_text(image):
 
             page = result[0]
 
-            texts = page.get("rec_texts", [])
-            scores = page.get("rec_scores", [])
+            if isinstance(page, dict):
+                texts = page.get("rec_texts", [])
+                scores = page.get("rec_scores", [])
 
-            for text, score in zip(texts, scores):
+                for text, score in zip(texts, scores):
 
-                print("TEXT:", text)
-                print("SCORE:", score)
+                    print("TEXT:", text)
+                    print("SCORE:", score)
 
-                if score > 0.3:
-                    extracted.append(text)
+                    if score > 0.3:
+                        extracted.append(text)
+            elif isinstance(page, list):
+                for line in page:
+                    if isinstance(line, list) and len(line) > 1 and isinstance(line[1], tuple):
+                        text, score = line[1]
+                        print("TEXT:", text)
+                        print("SCORE:", score)
+                        if score > 0.3:
+                            extracted.append(text)
 
     except Exception as e:
 

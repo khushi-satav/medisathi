@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
-import { authService, api } from '@/services/api';
+import api, { authService } from '@/services/api';
 import { User, Bell, Shield, Smartphone, Save, LogOut, ChevronDown, Activity, Calendar, Utensils, Smile } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';

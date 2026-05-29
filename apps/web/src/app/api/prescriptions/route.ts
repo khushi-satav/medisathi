@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     if (process.env.GEMINI_API_KEY && imageBase64) {
       try {
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
         const prompt = `You are an expert medical prescription reader specializing in Indian prescriptions.
 Extract all medications from the prescription image.

@@ -143,31 +143,7 @@ export async function POST(req: NextRequest) {
       status: 'ai_done',
     });
 
-    // ─── Step 4: Auto-create Medications ─────────────────────────────────
-    const addedMeds = [];
-    for (const med of parsedData.medicines || []) {
-      try {
-        const newMed = await Medication.create({
-          userId: userPayload.id,
-          name: med.name,
-          genericName: med.genericName || '',
-          dosage: med.dosage || '',
-          form: med.form?.toLowerCase() || 'tablet',
-          times: med.times?.length ? med.times : mapFrequencyToTimes(med.frequency),
-          foodInstruction: med.foodInstruction || 'after_meal',
-          startDate: new Date(),
-          stockCount: med.quantity || 30,
-          prescriptionId: prescription._id,
-          addedByOCR: true,
-          specialInstructions: med.specialInstructions || '',
-        });
-        addedMeds.push(newMed);
-      } catch (medErr: any) {
-        console.error('Failed to save medication:', med.name, medErr.message);
-      }
-    }
-
-    console.log(`Prescription processed: ${addedMeds.length} meds added via ${ocrSource}`);
+    console.log(`Prescription processed: ${parsedData.medicines?.length || 0} meds extracted via ${ocrSource}`);
 
     return NextResponse.json({
       success: true,
@@ -176,7 +152,7 @@ export async function POST(req: NextRequest) {
       fileUrl,
       extracted: parsedData,
       extractedMedicines: parsedData.medicines || [],
-      medications: addedMeds,
+      medications: [],
       confidence: parsedData.confidence,
       ocrSource,
     });

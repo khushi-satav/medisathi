@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Bell, Sparkles, User, Settings, LogOut } from 'lucide-react';
+import { Search, Bell, Sparkles, Settings, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';

@@ -7,3 +7,19 @@ build/
 coverage/
 .turbo/
 _backup/
+
+# Python
+__pycache__/
+*.pyc
+
+# Local scripts
+*check_db.js
+*check_med_logs.js
+*cleanup_duplicates.js
+*inspect_db_full.js
+
+# Datasets and cloned repositories
+apps/ml-api/Medical-Prescription-OCR/
+
+# Large Model Files
+apps/ml-api/models/spell_corrector.pkl

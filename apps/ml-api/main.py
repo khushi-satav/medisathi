@@ -1,10 +1,13 @@
+import os
+os.environ["PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT"] = "0"
+
 from pydantic import BaseModel
 from typing import Optional, List
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 import joblib
-import os
+import pickle
 from datetime import datetime
 import csv
 import io
@@ -12,10 +15,15 @@ from fastapi import FastAPI, HTTPException, Header, File, UploadFile
 from paddleocr import PaddleOCR
 import cv2
 
+# Import trained OCR modules
+from app.medical_spell_corrector import MedicalSpellCorrector
+from app.medicine_extractor import MedicineExtractor
+from app.prescription_preprocessor import preprocess_prescription
+
 # Initialize PaddleOCR (English and Hindi support)
 try:
     # use_textline_orientation is the replacement for deprecated use_angle_cls
-    ocr = PaddleOCR(use_textline_orientation=True, lang='en', show_log=False)
+    ocr = PaddleOCR(use_textline_orientation=True, lang='en')
 except Exception as e:
     print(f"Failed to initialize PaddleOCR: {e}")
     ocr = None
@@ -32,6 +40,32 @@ except:
     # Create models dir if not exists
     os.makedirs("models", exist_ok=True)
     os.makedirs("data", exist_ok=True)
+
+# Load trained OCR models
+spell_corrector = None
+medicine_extractor = None
+
+try:
+    spell_corrector = MedicalSpellCorrector.load("models/spell_corrector.pkl")
+    print(f"[OK] Spell corrector loaded ({spell_corrector.stats()['dictionary_size']:,} entries)")
+except Exception as e:
+    print(f"[WARN] Spell corrector not loaded (run train_prescription_ocr.py first): {e}")
+
+try:
+    vocab_path = "models/medicine_vocab.pkl"
+    if os.path.exists(vocab_path):
+        with open(vocab_path, 'rb') as f:
+            vocab_data = pickle.load(f)
+        medicine_extractor = MedicineExtractor()
+        medicine_extractor.medicine_names = set(vocab_data.get("medicine_names", []))
+        medicine_extractor.medical_terms = set(vocab_data.get("medical_terms", []))
+        print(f"[OK] Medicine extractor loaded ({len(medicine_extractor.medicine_names):,} medicines)")
+    else:
+        medicine_extractor = MedicineExtractor()
+        print("[WARN] Medicine vocabulary not found, using empty extractor")
+except Exception as e:
+    medicine_extractor = MedicineExtractor()
+    print(f"[WARN] Medicine extractor fallback: {e}")
 
 class PredictionRequest(BaseModel):
     age: int
@@ -242,44 +276,81 @@ async def scan_prescription(
         nparr = np.frombuffer(contents, np.uint8)
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
         
-        # Run OCR
-        result = ocr.ocr(img, cls=True)
+        if img is None:
+            return {"success": False, "error": "Invalid image file", "medicines": []}
+        
+        # Step 1: Preprocess image using Model-1/5 pipeline
+        try:
+            img_preprocessed = preprocess_prescription(
+                img, 
+                do_page_detection=True,
+                do_deskew=True,
+                do_enhance=True,
+                do_denoise=True
+            )
+        except Exception as e:
+            print(f"Preprocessing fallback: {e}")
+            img_preprocessed = img
+        
+        # Step 2: Run PaddleOCR on preprocessed image
+        result = ocr.ocr(img_preprocessed)
         
         raw_text = []
-        if result and result[0]:
-            for line in result[0]:
-                raw_text.append(line[1][0])
+        if result and len(result) > 0:
+            page = result[0]
+            if isinstance(page, dict):
+                raw_text = page.get("rec_texts", [])
+            elif isinstance(page, list):
+                for line in page:
+                    if isinstance(line, list) and len(line) > 1 and isinstance(line[1], tuple):
+                        raw_text.append(line[1][0])
         
-        # Simple extraction logic (can be improved)
+        # Step 3: Apply medical spell correction (from Model-5)
+        corrected_text = []
+        if spell_corrector and spell_corrector.is_trained:
+            for text in raw_text:
+                corrected = spell_corrector.correct_text(text)
+                corrected_text.append(corrected)
+        else:
+            corrected_text = raw_text
+        
+        # Step 4: Extract medicines using trained vocabulary
         medicines = []
-        # Keywords to look for
-        med_keywords = ["tablet", "tab", "capsule", "cap", "mg", "ml", "syrup", "syp"]
+        if medicine_extractor:
+            medicines = medicine_extractor.extract_medicines(corrected_text)
         
-        for i, text in enumerate(raw_text):
-            text_lower = text.lower()
-            if any(k in text_lower for k in med_keywords):
-                # Try to extract medicine name (usually the line itself or previous line)
-                med_name = text
-                dosage = ""
-                # Simple logic: if 'mg' in text, it's likely dosage
-                if "mg" in text_lower:
-                    parts = text.split()
-                    for p in parts:
-                        if "mg" in p.lower():
-                            dosage = p
-                
-                medicines.append({
-                    "name": med_name,
-                    "dosage": dosage,
-                    "confidence": 0.8,
-                    "form": "tablet" if "tab" in text_lower else "capsule" if "cap" in text_lower else "syrup"
-                })
+        # Fallback: simple keyword extraction if no medicines found
+        if not medicines:
+            med_keywords = ["tablet", "tab", "capsule", "cap", "mg", "ml", "syrup", "syp", "inj"]
+            for i, text in enumerate(corrected_text):
+                text_lower = text.lower()
+                if any(k in text_lower for k in med_keywords):
+                    med_name = text
+                    dosage = ""
+                    if "mg" in text_lower:
+                        parts = text.split()
+                        for p in parts:
+                            if "mg" in p.lower():
+                                dosage = p
+                    
+                    medicines.append({
+                        "name": med_name,
+                        "dosage": dosage,
+                        "form": "tablet" if "tab" in text_lower else "capsule" if "cap" in text_lower else "syrup",
+                        "frequency": "",
+                        "duration": "",
+                        "confidence": 0.7,
+                        "raw_text": text,
+                    })
 
         return {
             "success": True,
             "raw_text": raw_text,
-            "medicines": medicines[:5], # Limit for now
-            "total_lines": len(raw_text)
+            "corrected_text": corrected_text,
+            "medicines": medicines[:10],
+            "total_lines": len(raw_text),
+            "spell_correction_active": spell_corrector is not None and spell_corrector.is_trained,
+            "vocabulary_loaded": medicine_extractor is not None and len(medicine_extractor.medicine_names) > 0,
         }
     except Exception as e:
         print(f"OCR Error: {e}")

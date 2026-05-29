@@ -47,22 +47,63 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Name, dosage, and startDate are required' }, { status: 400 });
     }
 
-    const medication = await Medication.create({
+    const cleanName = name.trim();
+    
+    // Look for an existing medication (case-insensitive check)
+    const existingMed = await Medication.findOne({
       userId: user.id,
-      name,
-      genericName,
-      dosage,
-      form: form || 'tablet',
-      times: times || ['08:00'],
-      foodInstruction: foodInstruction || 'after_meal',
-      startDate: new Date(startDate),
-      endDate: endDate ? new Date(endDate) : undefined,
-      stockCount: stockCount ?? 30,
-      condition,
-      color: color || '#6C63FF',
-      isOngoing: isOngoing !== false,
-      specialInstructions,
+      name: { $regex: new RegExp("^" + cleanName.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&') + "$", "i") }
     });
+
+    let medication;
+
+    if (existingMed) {
+      // Reactivate soft-deleted medication, or update active one
+      existingMed.isActive = true;
+      
+      // Merge scheduled times
+      const allTimes = new Set([...(existingMed.times || []), ...(times || ['08:00'])]);
+      existingMed.times = Array.from(allTimes).sort();
+      
+      // Update stock: add manual new stock to existing stock (if stockCount is provided)
+      const additionalStock = Number(stockCount) ?? 30;
+      existingMed.stockCount = Math.max(0, existingMed.stockCount || 0) + additionalStock;
+      
+      // Update fields with manually input values
+      existingMed.dosage = dosage;
+      existingMed.form = form || 'tablet';
+      existingMed.foodInstruction = foodInstruction || 'after_meal';
+      existingMed.startDate = new Date(startDate);
+      existingMed.endDate = endDate ? new Date(endDate) : undefined;
+      existingMed.isOngoing = isOngoing !== false;
+      
+      if (genericName !== undefined) existingMed.genericName = genericName;
+      if (condition !== undefined) existingMed.condition = condition;
+      if (color !== undefined) existingMed.color = color;
+      if (specialInstructions !== undefined) existingMed.specialInstructions = specialInstructions;
+      
+      existingMed.updatedAt = new Date();
+      await existingMed.save();
+      medication = existingMed;
+    } else {
+      // Create new medication
+      medication = await Medication.create({
+        userId: user.id,
+        name: cleanName,
+        genericName,
+        dosage,
+        form: form || 'tablet',
+        times: times || ['08:00'],
+        foodInstruction: foodInstruction || 'after_meal',
+        startDate: new Date(startDate),
+        endDate: endDate ? new Date(endDate) : undefined,
+        stockCount: stockCount ?? 30,
+        condition,
+        color: color || '#6C63FF',
+        isOngoing: isOngoing !== false,
+        specialInstructions,
+      });
+    }
 
     return NextResponse.json({ medication }, { status: 201 });
   } catch (error: any) {

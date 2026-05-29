@@ -256,7 +256,7 @@ function StepCaregiver({ caregiverEmail, setCaregiverEmail }: {
 /* ─── Main Onboarding Page ─────────────────────────────────────────────── */
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, token } = useAuthStore();
+  const { user, token, updateUser } = useAuthStore();
 
   const [step, setStep]                   = useState(1);
   const [conditions, setConditions]       = useState<Condition[]>([]);
@@ -271,11 +271,15 @@ export default function OnboardingPage() {
     setSaving(true);
     try {
       // Patch user profile with health data
-      await api.patch('/auth/me', {
+      const res = await api.patch('/auth/me', {
         conditions,
         emergencyContacts: contacts,
         language,
       });
+
+      if (res.data?.user) {
+        updateUser(res.data.user);
+      }
 
       // Invite caregiver if provided
       if (caregiverEmail.trim()) {

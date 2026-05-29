@@ -6,8 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import {
-  LayoutDashboard, Pill, Activity, Settings,
-  LogOut, ChevronRight, User, MessageSquare, Calendar, Bell, LineChart, Users, ScanLine
+  LayoutDashboard, Pill, Settings, LogOut, ChevronRight, Calendar, LineChart, Users, ScanLine
 } from 'lucide-react';
 
 const patientNavItems = [
@@ -16,14 +15,12 @@ const patientNavItems = [
   { href: '/dose-tracker',    label: 'Tracker',           icon: Calendar },
   { href: '/scan-rx',         label: 'Scan Prescription', icon: ScanLine },
   { href: '/insights',        label: 'AI Insights',       icon: LineChart },
-  { href: '/messages',        label: 'Messages',          icon: MessageSquare, badge: 2 },
   { href: '/settings',        label: 'Settings',          icon: Settings },
 ];
 
 const caregiverNavItems = [
   { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/caregiver',       label: 'My Patients',       icon: Users },
-  { href: '/messages',        label: 'Messages',          icon: MessageSquare, badge: 1 },
   { href: '/settings',        label: 'Settings',          icon: Settings },
 ];
 
@@ -59,7 +56,7 @@ export default function Sidebar() {
               {active && (
                 <motion.div
                   layoutId="sidebar-active"
-                  className="absolute inset-0 bg-primary/10 rounded-2xl border border-primary/20"
+                  className="absolute inset-0 bg-primary/10 rounded-2xl border border-primary/20 pointer-events-none"
                   initial={false}
                   transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 />
