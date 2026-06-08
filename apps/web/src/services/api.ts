@@ -76,6 +76,9 @@ export const prescriptionsService = {
   // Add medications from a scanned prescription
   addMedications: (prescriptionId: string, selectedMedicines?: any[]) =>
     api.post('/prescriptions/add-medications', { prescriptionId, selectedMedicines }),
+
+  // Delete a scanned/uploaded prescription record
+  delete: (id: string) => api.delete(`/prescriptions/${id}`),
 };
 
 // ─── Insights ─────────────────────────────────────────────────────────────────

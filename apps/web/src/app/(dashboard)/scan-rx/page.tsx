@@ -62,6 +62,17 @@ export default function ScanRxPage() {
     onError: () => toast.error('Failed to add medications'),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => prescriptionsService.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['prescriptions'] });
+      toast.success('Prescription deleted successfully');
+    },
+    onError: () => {
+      toast.error('Failed to delete prescription');
+    }
+  });
+
   const animateSteps = () => {
     setStep(0);
     [600, 1400, 2300, 3200].forEach((delay, i) => setTimeout(() => setStep(i + 1), delay));
@@ -233,12 +244,7 @@ export default function ScanRxPage() {
                 <ChevronRight size={14} className="text-slate-400" />
               </div>
             </button>
-            <button onClick={loadDemo} disabled={uploading}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-all text-sm font-semibold text-emerald-700 shadow-sm">
-              <div className="w-8 h-8 rounded-lg bg-emerald-200 flex items-center justify-center"><FlaskConical size={16} className="text-emerald-700" /></div>
-              Use Demo Prescription
-              <span className="ml-auto text-xs bg-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full">LIVE</span>
-            </button>
+
           </div>
         </div>
 
@@ -368,17 +374,45 @@ export default function ScanRxPage() {
           <h3 className="font-bold text-slate-800 mb-3 text-sm uppercase tracking-wider">Recent Scans</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {prescriptions.slice(0, 6).map((rx: any) => (
-              <div key={rx._id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors border border-slate-100">
-                <div className="w-10 h-10 rounded-xl bg-secondary/30 flex items-center justify-center shrink-0">
-                  <FileText size={18} className="text-primary" />
+              <div key={rx._id} className="relative flex items-center justify-between gap-3 p-3 rounded-xl hover:bg-slate-50 transition-all border border-slate-100 group">
+                <div 
+                  onClick={() => {
+                    if (!rx.fileUrl) return;
+                    if (rx.fileUrl.startsWith('local://')) {
+                      toast.error("This local prescription image cannot be viewed because it was uploaded before local file storage was enabled.");
+                      return;
+                    }
+                    window.open(rx.fileUrl, '_blank');
+                  }}
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                  title="Click to view original prescription"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-secondary/30 flex items-center justify-center shrink-0">
+                    <FileText size={18} className="text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800 truncate hover:text-primary transition-colors">{rx.fileName || 'Prescription'}</p>
+                    <p className="text-xs text-slate-400">{new Date(rx.uploadedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}{rx.extractedMedications?.length ? ` · ${rx.extractedMedications.length} meds` : ''}</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 truncate">{rx.fileName || 'Prescription'}</p>
-                  <p className="text-xs text-slate-400">{new Date(rx.uploadedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}{rx.extractedMedications?.length ? ` · ${rx.extractedMedications.length} meds` : ''}</p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${rx.status === 'processed' ? 'bg-emerald-100 text-emerald-700' : rx.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                    {rx.status}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm('Are you sure you want to delete this prescription?')) {
+                        deleteMutation.mutate(rx._id);
+                      }
+                    }}
+                    disabled={deleteMutation.isPending}
+                    className="p-1 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+                    title="Delete prescription"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${rx.status === 'processed' ? 'bg-emerald-100 text-emerald-700' : rx.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                  {rx.status}
-                </span>
               </div>
             ))}
           </div>

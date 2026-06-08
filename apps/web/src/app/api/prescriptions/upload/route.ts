@@ -4,6 +4,8 @@ import connectDB from '@/lib/mongoose';
 import Prescription from '@/models/Prescription';
 import Medication from '@/models/Medication';
 import { scanPrescription } from '@/lib/mlClient';
+import fs from 'fs';
+import path from 'path';
 
 // Only import Gemini/Cloudinary if keys are configured
 const hasGemini = !!process.env.GEMINI_API_KEY;
@@ -49,9 +51,19 @@ export async function POST(req: NextRequest) {
         console.warn('Cloudinary upload skipped:', err.message);
       }
     }
-    // Fallback: store a placeholder URL (image is processed server-side anyway)
+    // Fallback: save the file locally in public/uploads so the browser can serve it
     if (!fileUrl) {
-      fileUrl = `local://prescription/${userPayload.id}/${Date.now()}_${file.name}`;
+      try {
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'prescriptions', userPayload.id);
+        fs.mkdirSync(uploadDir, { recursive: true });
+        const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const filePath = path.join(uploadDir, fileName);
+        fs.writeFileSync(filePath, buffer);
+        fileUrl = `/uploads/prescriptions/${userPayload.id}/${fileName}`;
+      } catch (err: any) {
+        console.error('Local file save failed, using fallback URL:', err.message);
+        fileUrl = `local://prescription/${userPayload.id}/${Date.now()}_${file.name}`;
+      }
     }
 
     // ─── Step 2: OCR — try ML API (PaddleOCR) first, then Gemini fallback ─
