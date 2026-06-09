@@ -8,7 +8,9 @@ export async function GET(req: NextRequest) {
     const authUser = requireAuth(req);
     await connectDB();
 
-    const user = await User.findById(authUser.id).select('-passwordHash');
+    const user = await User.findById(authUser.id)
+      .select('-passwordHash')
+      .populate('caregiverLinks.userId', 'name email role profilePhoto');
     if (!user) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }

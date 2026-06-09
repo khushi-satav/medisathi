@@ -1,25 +1,46 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/api';
 import { Eye, EyeOff, Pill, CheckCircle2 } from 'lucide-react';
+import axios from 'axios';
 
-export default function RegisterPage() {
+function RegisterContent() {
   const router = useRouter();
   const { login } = useAuthStore();
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get('inviteToken');
+  const queryEmail = searchParams.get('email');
+  const queryRole = searchParams.get('role');
+
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
-    name: '', email: '', phone: '', password: '', confirmPassword: '',
-    age: '', gender: '', role: 'patient',
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    age: '',
+    gender: '',
+    role: 'patient',
   });
 
   const updateForm = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
+
+  useEffect(() => {
+    if (queryEmail) {
+      updateForm('email', queryEmail);
+    }
+    if (queryRole === 'caregiver' || queryRole === 'patient') {
+      updateForm('role', queryRole);
+    }
+  }, [queryEmail, queryRole]);
 
   const handleStep1 = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +74,22 @@ export default function RegisterPage() {
       };
       const { data } = await authService.register(payload);
       login(data.user, data.token);
-      toast.success(`Welcome to MediSaathi, ${data.user.name}! 🎉`);
+
+      if (inviteToken) {
+        try {
+          await axios.post('/api/caregiver/invite/respond', {
+            token: inviteToken,
+            action: 'accept',
+          });
+          toast.success('Account created & caregiver invitation accepted! 🎉');
+        } catch (err: any) {
+          console.error('[Auto-accept invite error]', err);
+          toast.success(`Account created, but invite link failed: ${err.response?.data?.error || err.message}`);
+        }
+      } else {
+        toast.success(`Welcome to MediSaathi, ${data.user.name}! 🎉`);
+      }
+
       router.push('/onboarding');
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Registration failed');
@@ -74,16 +110,19 @@ export default function RegisterPage() {
 
         {/* Steps indicator */}
         <div className="flex items-center justify-center mb-10 space-x-3">
-          {[1, 2].map(s => (
-            <div key={s} className="flex items-center">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all shadow-sm ${
-                step >= s ? 'bg-primary text-white shadow-warm' : 'bg-border text-muted'
-              }`}>
-                {step > s ? <CheckCircle2 size={20} /> : s}
+          {[1, s => s].map((_, i) => {
+            const s = i + 1;
+            return (
+              <div key={s} className="flex items-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all shadow-sm ${
+                  step >= s ? 'bg-primary text-white shadow-warm' : 'bg-border text-muted'
+                }`}>
+                  {step > s ? <CheckCircle2 size={20} /> : s}
+                </div>
+                {s < 2 && <div className={`w-16 h-1 mx-2 rounded-full transition-colors ${step > s ? 'bg-primary' : 'bg-border'}`} />}
               </div>
-              {s < 2 && <div className={`w-16 h-1 mx-2 rounded-full transition-colors ${step > s ? 'bg-primary' : 'bg-border'}`} />}
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="bg-card rounded-3xl shadow-card border border-border p-8 sm:p-10">
@@ -92,6 +131,11 @@ export default function RegisterPage() {
               <h2 className="text-3xl font-bold text-foreground mb-2">Create account</h2>
               <p className="text-muted text-base mb-8">Step 1 of 2 — Account details</p>
               <form onSubmit={handleStep1} className="space-y-5">
+                {inviteToken && (
+                  <div className="p-4 bg-primary/10 border border-primary/20 rounded-2xl text-sm text-primary font-medium">
+                    ✨ Completing registration will link you as a caregiver.
+                  </div>
+                )}
                 <div>
                   <label className="label text-foreground font-semibold mb-1.5 block">Full Name *</label>
                   <input id="name" className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="Rahul Sharma" value={form.name} onChange={e => updateForm('name', e.target.value)} />
@@ -101,15 +145,17 @@ export default function RegisterPage() {
                   <div className="flex p-1 bg-secondary/20 rounded-2xl">
                     <button 
                       type="button"
+                      disabled={!!inviteToken}
                       onClick={() => updateForm('role', 'patient')}
-                      className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${form.role === 'patient' ? 'bg-white text-primary shadow-sm' : 'text-muted'}`}
+                      className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${form.role === 'patient' ? 'bg-white text-primary shadow-sm' : 'text-muted'} ${inviteToken ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       Patient
                     </button>
                     <button 
                       type="button"
+                      disabled={!!inviteToken}
                       onClick={() => updateForm('role', 'caregiver')}
-                      className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${form.role === 'caregiver' ? 'bg-white text-primary shadow-sm' : 'text-muted'}`}
+                      className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${form.role === 'caregiver' ? 'bg-white text-primary shadow-sm' : 'text-muted'} ${inviteToken ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       Caregiver
                     </button>
@@ -117,7 +163,7 @@ export default function RegisterPage() {
                 </div>
                 <div>
                   <label className="label text-foreground font-semibold mb-1.5 block">Email *</label>
-                  <input id="email" type="email" className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="rahul@example.com" value={form.email} onChange={e => updateForm('email', e.target.value)} />
+                  <input id="email" type="email" readOnly={!!inviteToken} className={`input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3 ${inviteToken ? 'bg-secondary/10 cursor-not-allowed opacity-80' : ''}`} placeholder="rahul@example.com" value={form.email} onChange={e => updateForm('email', e.target.value)} />
                 </div>
                 <div>
                   <label className="label text-foreground font-semibold mb-1.5 block">Phone (optional)</label>
@@ -178,7 +224,7 @@ export default function RegisterPage() {
           <div className="mt-8 text-center">
             <p className="text-base text-muted">
               Already have an account?{' '}
-              <Link href="/login" className="text-primary font-bold hover:text-primary-dark hover:underline transition-colors">Sign in</Link>
+              <Link href={inviteToken ? `/login?inviteToken=${inviteToken}&role=caregiver` : "/login"} className="text-primary font-bold hover:text-primary-dark hover:underline transition-colors">Sign in</Link>
             </p>
           </div>
         </div>
@@ -186,3 +232,19 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center">
+          <Pill className="animate-spin text-primary mb-2" size={32} />
+          <span className="text-sm text-muted">Loading registration page...</span>
+        </div>
+      </div>
+    }>
+      <RegisterContent />
+    </Suspense>
+  );
+}
+

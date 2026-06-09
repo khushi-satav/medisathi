@@ -24,10 +24,23 @@ const caregiverNavItems = [
   { href: '/settings',        label: 'Settings',          icon: Settings },
 ];
 
+const doctorNavItems = [
+  { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
+  { href: '/doctor',          label: 'My Patients',       icon: Users },
+  { href: '/settings',        label: 'Settings',          icon: Settings },
+];
+
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
+
+  const navItems = user?.role === 'caregiver'
+    ? caregiverNavItems
+    : user?.role === 'doctor'
+    ? doctorNavItems
+    : patientNavItems;
+
 
   const handleLogout = () => {
     logout();
@@ -49,7 +62,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-4 py-2 space-y-2 overflow-y-auto">
-        {(user?.role === 'caregiver' ? caregiverNavItems : patientNavItems).map(({ href, label, icon: Icon, badge }) => {
+        {navItems.map(({ href, label, icon: Icon, badge }) => {
           const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
           return (
             <Link key={href} href={href} className="relative block group">

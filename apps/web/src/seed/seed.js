@@ -30,6 +30,7 @@ const UserSchema = new Schema({
   language: { type: String, default: 'en' },
   timezone: { type: String, default: 'Asia/Kolkata' },
   role: { type: String, enum: ['patient', 'caregiver', 'doctor', 'admin'], default: 'patient' },
+  specialization: String,
   isVerified: { type: Boolean, default: false },
   conditions: [{ name: String, icdCode: String, severity: String }],
   caregiverLinks: [{
@@ -140,6 +141,51 @@ async function seed() {
 
   console.log(`   ✅ User ID: ${user._id}  | Email: sunita@gmail.com | Password: Sunita@123`);
 
+  // ── 1.05 Doctors ─────────────────────────────────────────────────────────
+  console.log('\n👨‍⚕️ Creating verified doctors...');
+
+  const doctor1PasswordHash = await bcrypt.hash('Priya@123', 12);
+  const doctor2PasswordHash = await bcrypt.hash('Amit@123', 12);
+
+  const doctor1 = await User.findOneAndUpdate(
+    { email: 'priya@gmail.com' },
+    {
+      $setOnInsert: {
+        email: 'priya@gmail.com',
+        phone: '+919888888888',
+        passwordHash: doctor1PasswordHash,
+        name: 'Dr. Priya Sharma',
+        role: 'doctor',
+        specialization: 'Endocrinologist',
+        isVerified: true,
+        age: 42,
+        gender: 'female',
+      }
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  const doctor2 = await User.findOneAndUpdate(
+    { email: 'amit@gmail.com' },
+    {
+      $setOnInsert: {
+        email: 'amit@gmail.com',
+        phone: '+919777777777',
+        passwordHash: doctor2PasswordHash,
+        name: 'Dr. Amit Patel',
+        role: 'doctor',
+        specialization: 'Cardiologist',
+        isVerified: true,
+        age: 45,
+        gender: 'male',
+      }
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
+  console.log(`   ✅ Doctor 1: ${doctor1.name} (ID: ${doctor1._id})`);
+  console.log(`   ✅ Doctor 2: ${doctor2.name} (ID: ${doctor2._id})`);
+
   // ── 1.1 Caregiver ────────────────────────────────────────────────────────
   console.log('\n👥 Creating caregiver: Anil Kumar...');
 
@@ -166,7 +212,7 @@ async function seed() {
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 
-  // Link Sunita to Anil too
+  // Link Sunita to Anil and doctors
   await User.findByIdAndUpdate(user._id, {
     $set: {
       caregiverLinks: [{
@@ -174,7 +220,11 @@ async function seed() {
         relationship: 'Son',
         permissions: ['all'],
         isActive: true
-      }]
+      }],
+      doctorLinks: [
+        { doctorId: doctor1._id, name: doctor1.name, specialization: doctor1.specialization, isActive: true },
+        { doctorId: doctor2._id, name: doctor2.name, specialization: doctor2.specialization, isActive: true },
+      ]
     }
   });
 

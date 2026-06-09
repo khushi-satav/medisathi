@@ -103,6 +103,23 @@ export const caregiverService = {
   getPatients: () => api.get('/caregiver/patients'),
 };
 
+// ─── Doctor ───────────────────────────────────────────────────────────────────
+export const doctorService = {
+  getPatients: (includeInactive = false) =>
+    api.get(`/doctors/patients${includeInactive ? '?includeInactive=true' : ''}`),
+  getPatientDetails: (patientId: string) => api.get(`/doctors/patients/${patientId}`),
+  addNote: (patientId: string, note: string) => api.post('/doctors/notes', { patientId, note }),
+  togglePatientStatus: (patientId: string, isActive: boolean) =>
+    api.patch(`/doctors/patients/${patientId}`, { isActive }),
+  
+  // Patient-facing doctor link operations:
+  getAllDoctors: () => api.get('/doctors'),
+  linkDoctor: (doctorId: string) => api.post('/doctors/link', { doctorId }),
+  toggleDoctorLink: (doctorId: string, isActive: boolean) =>
+    api.patch('/doctors/link', { doctorId, isActive }),
+  unlinkDoctor: (doctorId: string) => api.delete(`/doctors/link?doctorId=${doctorId}`),
+};
+
 // ─── ML Predictions ───────────────────────────────────────────────────────────
 export const predictionsService = {
   // Get adherence risk prediction for a medication

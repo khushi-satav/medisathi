@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Pill, ScanLine, BarChart3, Settings } from 'lucide-react';
+import { Home, Pill, ScanLine, BarChart3, Settings, Users } from 'lucide-react';
 
 import { useAuthStore } from '@/store/authStore';
 
@@ -14,17 +14,26 @@ const patientTabs = [
   { href: '/settings',     label: 'Settings', icon: Settings },
 ];
 
-import { Users } from 'lucide-react';
 const caregiverTabs = [
   { href: '/dashboard',       label: 'Home',      icon: Home },
   { href: '/caregiver',       label: 'Patients',  icon: Users, center: true },
   { href: '/settings',        label: 'Settings',  icon: Settings },
 ];
 
+const doctorTabs = [
+  { href: '/dashboard',       label: 'Home',      icon: Home },
+  { href: '/doctor',          label: 'Patients',  icon: Users, center: true },
+  { href: '/settings',        label: 'Settings',  icon: Settings },
+];
+
 export default function MobileTabBar() {
   const pathname = usePathname();
   const { user } = useAuthStore();
-  const tabs = user?.role === 'caregiver' ? caregiverTabs : patientTabs;
+  const tabs = user?.role === 'caregiver'
+    ? caregiverTabs
+    : user?.role === 'doctor'
+    ? doctorTabs
+    : patientTabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border flex items-center justify-around px-2 pb-safe z-50 md:hidden shadow-[0_-4px_24px_rgba(75,46,43,0.06)]"
