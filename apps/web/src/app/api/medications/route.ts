@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       name, dosage, form, times, foodInstruction,
-      startDate, endDate, stockCount, condition,
+      startDate, endDate, stockCount, refillAlertDays, condition,
       color, isOngoing, specialInstructions, genericName,
     } = body;
 
@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
       existingMed.startDate = new Date(startDate);
       existingMed.endDate = endDate ? new Date(endDate) : undefined;
       existingMed.isOngoing = isOngoing !== false;
+      if (refillAlertDays !== undefined) existingMed.refillAlertDays = refillAlertDays;
       
       if (genericName !== undefined) existingMed.genericName = genericName;
       if (condition !== undefined) existingMed.condition = condition;
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : undefined,
         stockCount: stockCount ?? 30,
+        refillAlertDays: refillAlertDays ?? 7,
         condition,
         color: color || '#6C63FF',
         isOngoing: isOngoing !== false,

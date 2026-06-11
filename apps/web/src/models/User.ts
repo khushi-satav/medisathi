@@ -58,6 +58,8 @@ export interface IUser extends Document {
     share_logs_doctor: boolean;
     shared_doctor_id?: mongoose.Types.ObjectId;
   };
+  sosMessage?: string;
+  lastSeen?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(password: string): Promise<boolean>;
@@ -119,12 +121,14 @@ const UserSchema = new Schema<IUser>({
     smart_timing: { type: Boolean, default: true },
     caregiver_alerts: { type: Boolean, default: true },
     refill_alerts: { type: Boolean, default: true },
-    missed_dose_escalation: { type: Boolean, default: false },
+    missed_dose_escalation: { type: Boolean, default: true },
     weekly_report: { type: Boolean, default: true },
     advance_reminder_time: { type: Number, default: 15 },
     share_logs_doctor: { type: Boolean, default: false },
     shared_doctor_id: { type: Schema.Types.ObjectId, ref: 'User' },
   },
+  sosMessage: { type: String, default: 'EMERGENCY: I need help. Please contact me immediately.' },
+  lastSeen: { type: Date, default: Date.now },
 }, { timestamps: true });
 
 UserSchema.pre('save', async function () {

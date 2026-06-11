@@ -12,6 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import twilio from 'twilio';
 import { requireAuth } from '@/lib/auth';
 import connectDB from '@/lib/mongoose';
 import User from '@/models/User';
@@ -25,8 +26,9 @@ export async function POST(req: NextRequest) {
     await connectDB();
 
     const body = await req.json();
-    const { email, relationship, permissions, message } = body as {
+    const { email, phone, relationship, permissions, message } = body as {
       email: string;
+      phone?: string;
       relationship: string;
       permissions?: string[];
       message?: string;
@@ -40,9 +42,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Fetch patient
-    const patient = await User.findById(userPayload.id).select('name email');
+    const patient = await User.findById(userPayload.id).select('name email caregiverLinks');
     if (!patient) {
       return NextResponse.json({ error: 'Patient not found' }, { status: 404 });
+    }
+
+    const alreadyLinked = patient.caregiverLinks?.some(
+      (l: any) => l.email === email.toLowerCase() && l.isActive
+    );
+    if (alreadyLinked) {
+      return NextResponse.json({ error: 'Already connected with this caregiver' }, { status: 400 });
     }
 
     // Prevent self-invite
@@ -95,6 +104,19 @@ export async function POST(req: NextRequest) {
         rejectUrl,
       }),
     });
+
+    if (phone && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+      try {
+        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        await twilioClient.messages.create({
+          body: `${patient.name} invited you to monitor their medicines on MediSaathi. Accept here: ${acceptUrl}`,
+          to: phone,
+          from: process.env.TWILIO_PHONE_NUMBER
+        });
+      } catch (smsError) {
+        console.error('Failed to send SMS invite:', smsError);
+      }
+    }
 
     return NextResponse.json({
       success: true,

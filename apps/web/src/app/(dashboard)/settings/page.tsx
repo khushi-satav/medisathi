@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import CaregiverConnect from '@/components/settings/CaregiverConnect';
 import {
   LineChart,
   Line,
@@ -35,9 +36,43 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
+  ReferenceArea,
+  ReferenceLine,
 } from 'recharts';
 
 type Tab = 'progress' | 'notifications' | 'privacy';
+
+const formatPhone = (num: string) => {
+  if (!num) return '';
+  if (num.startsWith('+91')) return num;
+  return `+91 ${num.slice(0,5)} ${num.slice(5)}`;
+};
+
+const MealLoggingRing = ({ percentage }: { percentage: number }) => {
+  const circumference = 2 * Math.PI * 16; // radius 16
+  const offset = circumference - (percentage / 100) * circumference;
+  return (
+    <svg width="40" height="40" viewBox="0 0 40 40">
+      {/* Background circle */}
+      <circle cx="20" cy="20" r="16" fill="none" stroke="#F3E8DC" strokeWidth="4"/>
+      {/* Progress circle */}
+      <circle
+        cx="20" cy="20" r="16"
+        fill="none"
+        stroke="#E8532B"
+        strokeWidth="4"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        transform="rotate(-90 20 20)"
+      />
+      {/* Percentage text inside */}
+      <text x="20" y="24" textAnchor="middle" fontSize="10" fill="#E8532B" fontWeight="bold">
+        {percentage}%
+      </text>
+    </svg>
+  );
+};
 
 const bloodSugarData = [
   { day: 'Mon', value: 108 },
@@ -67,6 +102,13 @@ export default function SettingsPage() {
   const [relationship, setRelationship] = useState('parent');
   const [inviteMessage, setInviteMessage] = useState('');
 
+  // SOS Contacts state
+  const [emergencyContacts, setEmergencyContacts] = useState<{name: string; phone: string; relationship: string; isPrimary: boolean}[]>(user?.emergencyContacts || []);
+  const [newSosName, setNewSosName] = useState('');
+  const [newSosPhone, setNewSosPhone] = useState('');
+  const [newSosRel, setNewSosRel] = useState('family');
+  const [sosMessage, setSosMessage] = useState(user?.sosMessage || 'EMERGENCY: I need help. Please contact me immediately.');
+
   // 1. Fetch Fresh and Populated User Details
   const { data: dbUser, refetch: refetchUser } = useQuery({
     queryKey: ['me'],
@@ -74,6 +116,8 @@ export default function SettingsPage() {
       const res = await authService.getMe();
       const fetchedUser = res.data.user;
       updateUser(fetchedUser);
+      setEmergencyContacts(fetchedUser.emergencyContacts || []);
+      setSosMessage(fetchedUser.sosMessage || 'EMERGENCY: I need help. Please contact me immediately.');
       return fetchedUser;
     },
     initialData: user,
@@ -182,6 +226,25 @@ export default function SettingsPage() {
       toast.success('Profile updated!');
     },
     onError: () => toast.error('Failed to update profile'),
+  });
+
+  const saveSosMutation = useMutation({
+    mutationFn: (data: any) => authService.updateMe(data),
+    onSuccess: (res) => {
+      updateUser(res.data.user);
+      toast.success('SOS settings saved!');
+    },
+    onError: () => toast.error('Failed to save SOS settings'),
+  });
+
+  const sendTestSMSMutation = useMutation({
+    mutationFn: () => api.post('/test-sms'),
+    onSuccess: (res) => {
+      toast.success(res.data.message || 'Test SMS sent!');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.error || 'Failed to send test SMS');
+    },
   });
 
   // 4. Update Notifications Mutation
@@ -364,13 +427,7 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium text-slate-500">Meal Logging</p>
               </div>
               <div className="flex items-center gap-4 mt-1">
-                <p className="text-2xl font-bold text-slate-800">85%</p>
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: 'conic-gradient(#10b981 85%, #d1d5db 0)' }}
-                >
-                  <div className="w-6 h-6 bg-slate-50 rounded-full"></div>
-                </div>
+                <MealLoggingRing percentage={85} />
               </div>
             </div>
 
@@ -397,13 +454,31 @@ export default function SettingsPage() {
                 <LineChart data={bloodSugarData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="day" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[80, 140]} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[60, 160]} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
                   <RechartsTooltip
                     contentStyle={{
                       borderRadius: '8px',
                       border: 'none',
                       boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                     }}
+                  />
+                  <ReferenceArea 
+                    y1={70} y2={140} 
+                    fill="#10B981" 
+                    fillOpacity={0.05} 
+                    label={{ value: "Normal Range", position: "insideTopLeft", fontSize: 10, fill: "#10B981" }}
+                  />
+                  <ReferenceLine 
+                    y={140} 
+                    stroke="#EF4444" 
+                    strokeDasharray="3 3" 
+                    label={{ value: "High", position: "right", fontSize: 10, fill: "#EF4444" }}
+                  />
+                  <ReferenceLine 
+                    y={70} 
+                    stroke="#EF4444" 
+                    strokeDasharray="3 3"
+                    label={{ value: "Low", position: "right", fontSize: 10, fill: "#EF4444" }}
                   />
                   <Line
                     type="monotone"
@@ -533,10 +608,19 @@ export default function SettingsPage() {
               ) : (
                 <div className="mt-6 flex flex-col gap-3">
                   <div className="bg-white/20 px-4 py-3 rounded-xl font-medium flex justify-between items-center">
-                    <span>{user.phone}</span>
-                    <span className="text-xs bg-emerald-500 px-2 py-1 rounded text-white shadow-sm border border-emerald-400">
-                      Active
-                    </span>
+                    <span>{formatPhone(user.phone)}</span>
+                    <div className="flex items-center">
+                      <span className="text-xs bg-emerald-500 px-2 py-1 rounded text-white shadow-sm border border-emerald-400">
+                        Active
+                      </span>
+                      <button 
+                        onClick={() => sendTestSMSMutation.mutate()}
+                        disabled={sendTestSMSMutation.isPending}
+                        className="text-xs text-white/70 underline ml-2 hover:text-white transition-colors disabled:opacity-50"
+                      >
+                        {sendTestSMSMutation.isPending ? 'Sending...' : 'Send test SMS'}
+                      </button>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -562,78 +646,80 @@ export default function SettingsPage() {
             <h3 className="card-title mb-4">Privacy & Sharing</h3>
 
             {/* Caregivers Management Section */}
-            <div className="mb-8 border-b border-slate-100 pb-6">
-              <h4 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-2">
-                <Users size={18} className="text-primary" />
-                {dbUser?.role === 'caregiver' ? 'Patient Connections' : 'Caregiver Connections'}
-              </h4>
-              <p className="text-xs text-slate-500 mb-6">
-                {dbUser?.role === 'caregiver'
-                  ? 'Manage and monitor the patients who have shared access to their health records with you.'
-                  : 'Manage family members, caretakers, or doctors who can monitor your doses and receive alerts.'}
-              </p>
-
-              {/* Active Connections List */}
-              <div className="space-y-3 mb-6">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Active Connections ({dbUser?.caregiverLinks?.filter((l: any) => l.isActive).length || 0})
+            {dbUser?.role !== 'caregiver' ? (
+              <div className="mb-8 border-b border-slate-100 pb-6">
+                <CaregiverConnect />
+              </div>
+            ) : (
+              <div className="mb-8 border-b border-slate-100 pb-6">
+                <h4 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-2">
+                  <Users size={18} className="text-primary" />
+                  Patient Connections
+                </h4>
+                <p className="text-xs text-slate-500 mb-6">
+                  Manage and monitor the patients who have shared access to their health records with you.
                 </p>
 
-                {(!dbUser?.caregiverLinks ||
-                  dbUser.caregiverLinks.filter((l: any) => l.isActive).length === 0) && (
-                  <div className="text-center p-6 border border-dashed border-slate-200 rounded-xl bg-slate-50">
-                    <Heart size={32} className="mx-auto text-slate-300 mb-2" />
-                    <p className="text-sm text-slate-500">No active connections linked yet.</p>
-                  </div>
-                )}
+                {/* Active Connections List */}
+                <div className="space-y-3 mb-6">
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                    Active Connections ({dbUser?.caregiverLinks?.filter((l: any) => l.isActive).length || 0})
+                  </p>
 
-                {dbUser?.caregiverLinks
-                  ?.filter((link: any) => link.isActive)
-                  .map((link: any) => (
-                    <div
-                      key={link.userId?._id || link._id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:border-slate-200 transition-colors gap-3"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-800 text-sm">
-                            {link.userId?.name || link.name || 'Pending User'}
-                          </span>
-                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded capitalize">
-                            {link.relationship}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1">
-                          Email: {link.userId?.email || link.email}
-                        </p>
-                        {link.linkedAt && (
-                          <p className="text-[10px] text-slate-400 mt-0.5">
-                            Connected on:{' '}
-                            {new Date(link.linkedAt).toLocaleDateString(undefined, {
-                              dateStyle: 'medium',
-                            })}
-                          </p>
-                        )}
-                      </div>
-
-                      <button
-                        onClick={() =>
-                          deleteInviteOrConnectionMutation.mutate(
-                            link.userId?._id || link.userId
-                          )
-                        }
-                        disabled={deleteInviteOrConnectionMutation.isPending}
-                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-100"
-                      >
-                        <Trash2 size={12} />
-                        Disconnect
-                      </button>
+                  {(!dbUser?.caregiverLinks ||
+                    dbUser.caregiverLinks.filter((l: any) => l.isActive).length === 0) && (
+                    <div className="text-center p-6 border border-dashed border-slate-200 rounded-xl bg-slate-50">
+                      <Heart size={32} className="mx-auto text-slate-300 mb-2" />
+                      <p className="text-sm text-slate-500">No active connections linked yet.</p>
                     </div>
-                  ))}
-              </div>
+                  )}
 
-              {/* Pending Received Invites (If Caregiver) */}
-              {dbUser?.role === 'caregiver' && (
+                  {dbUser?.caregiverLinks
+                    ?.filter((link: any) => link.isActive)
+                    .map((link: any) => (
+                      <div
+                        key={link.userId?._id || link._id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-slate-100 bg-white shadow-sm hover:border-slate-200 transition-colors gap-3"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-slate-800 text-sm">
+                              {link.userId?.name || link.name || 'Pending User'}
+                            </span>
+                            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded capitalize">
+                              {link.relationship}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Email: {link.userId?.email || link.email}
+                          </p>
+                          {link.linkedAt && (
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              Connected on:{' '}
+                              {new Date(link.linkedAt).toLocaleDateString(undefined, {
+                                dateStyle: 'medium',
+                              })}
+                            </p>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() =>
+                            deleteInviteOrConnectionMutation.mutate(
+                              link.userId?._id || link.userId
+                            )
+                          }
+                          disabled={deleteInviteOrConnectionMutation.isPending}
+                          className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors border border-red-100"
+                        >
+                          <Trash2 size={12} />
+                          Disconnect
+                        </button>
+                      </div>
+                    ))}
+                </div>
+
+                {/* Pending Received Invites (If Caregiver) */}
                 <div className="space-y-3 mb-6 bg-yellow-50/50 border border-yellow-100 p-4 rounded-xl">
                   <p className="text-xs font-bold text-yellow-800 uppercase tracking-wider flex items-center gap-1.5">
                     <Mail size={14} className="text-yellow-600" />
@@ -697,125 +783,8 @@ export default function SettingsPage() {
                       </div>
                     ))}
                 </div>
-              )}
-
-              {/* Pending Sent Invites */}
-              {dbUser?.role !== 'caregiver' && (
-                <div className="space-y-3 mb-6 bg-slate-50 border border-slate-200/60 p-4 rounded-xl">
-                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Mail size={14} className="text-slate-400" />
-                    Sent Caregiver Invites (
-                    {invitesData?.sent?.filter((i: any) => i.status === 'pending').length || 0}
-                    )
-                  </p>
-
-                  {(!invitesData?.sent ||
-                    invitesData.sent.filter((i: any) => i.status === 'pending').length === 0) && (
-                    <p className="text-xs text-slate-400 italic">No pending sent invitations.</p>
-                  )}
-
-                  {invitesData?.sent
-                    ?.filter((invite: any) => invite.status === 'pending')
-                    .map((invite: any) => (
-                      <div
-                        key={invite._id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border border-slate-100 bg-white gap-3"
-                      >
-                        <div>
-                          <p className="text-xs font-medium text-slate-800">
-                            Sent to: <span className="font-bold">{invite.caregiverEmail}</span>
-                          </p>
-                          <p className="text-xs text-slate-500 mt-0.5">
-                            Relationship: <span className="capitalize">{invite.relationship}</span>
-                          </p>
-                          <p className="text-[10px] text-orange-500 font-semibold mt-1">
-                            Pending registration/acceptance
-                          </p>
-                        </div>
-
-                        <button
-                          onClick={() => deleteInviteOrConnectionMutation.mutate(invite._id)}
-                          disabled={deleteInviteOrConnectionMutation.isPending}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-red-100"
-                        >
-                          Cancel Invite
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              )}
-
-              {/* Send Invite Form (Only for Patients) */}
-              {dbUser?.role !== 'caregiver' && (
-                <div className="p-5 rounded-xl border border-slate-100 bg-slate-50/70">
-                  <h5 className="text-sm font-semibold text-slate-800 mb-2">Invite New Caregiver</h5>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Send an email invitation. Once they sign up or accept, they can view your medication logs and receive missed-dose alerts.
-                  </p>
-
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Caregiver Email</label>
-                        <input
-                          type="email"
-                          placeholder="caregiver@email.com"
-                          value={caregiverEmail}
-                          onChange={(e) => setCaregiverEmail(e.target.value)}
-                          className="w-full bg-white border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm font-medium"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Relationship</label>
-                        <select
-                          value={relationship}
-                          onChange={(e) => setRelationship(e.target.value)}
-                          className="w-full bg-white border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm font-medium"
-                        >
-                          <option value="parent">Parent</option>
-                          <option value="spouse">Spouse</option>
-                          <option value="child">Child</option>
-                          <option value="sibling">Sibling</option>
-                          <option value="guardian">Guardian</option>
-                          <option value="friend">Friend</option>
-                          <option value="caretaker">Caretaker</option>
-                          <option value="other">Other</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-medium text-slate-500 mb-1">Optional Message</label>
-                      <input
-                        type="text"
-                        placeholder="Hi! Please join MediSaathi to help monitor my health."
-                        value={inviteMessage}
-                        onChange={(e) => setInviteMessage(e.target.value)}
-                        className="w-full bg-white border border-slate-200 text-slate-700 py-2.5 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm font-medium"
-                      />
-                    </div>
-
-                    <div className="flex justify-end pt-1">
-                      <button
-                        className="btn-primary text-sm py-2.5 px-6 whitespace-nowrap disabled:opacity-50 inline-flex items-center gap-1.5"
-                        disabled={!caregiverEmail || inviteMutation.isPending}
-                        onClick={() =>
-                          inviteMutation.mutate({
-                            email: caregiverEmail,
-                            relationship,
-                            message: inviteMessage || undefined,
-                          })
-                        }
-                      >
-                        {inviteMutation.isPending && <Loader2 size={14} className="animate-spin" />}
-                        {inviteMutation.isPending ? 'Sending...' : 'Send Invitation'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Doctor Access Form */}
             {dbUser?.role === 'patient' && (
@@ -949,6 +918,114 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+
+            {/* SOS Contacts Section */}
+            <div className="border-t border-slate-100 pt-6 mt-6">
+              <h4 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-2">
+                <Smartphone size={18} className="text-red-500" />
+                SOS Emergency Sequence
+              </h4>
+              <p className="text-xs text-slate-500 mb-4">
+                These contacts will be alerted sequentially when you trigger an SOS.
+              </p>
+
+              <div className="space-y-4 mb-6">
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Custom SOS Message</label>
+                  <textarea
+                    value={sosMessage}
+                    onChange={(e) => setSosMessage(e.target.value)}
+                    className="w-full bg-white border border-slate-200 text-slate-700 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 text-sm resize-none"
+                    rows={2}
+                    placeholder="Enter the message to send during an emergency"
+                  ></textarea>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={newSosName}
+                    onChange={(e) => setNewSosName(e.target.value)}
+                    className="flex-1 bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  />
+                  <input
+                    type="tel"
+                    placeholder="Phone Number"
+                    value={newSosPhone}
+                    onChange={(e) => setNewSosPhone(e.target.value)}
+                    className="flex-1 bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  />
+                  <select
+                    value={newSosRel}
+                    onChange={(e) => setNewSosRel(e.target.value)}
+                    className="flex-1 bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
+                  >
+                    <option value="family">Family</option>
+                    <option value="friend">Friend</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!newSosName || !newSosPhone) return toast.error('Name and Phone are required');
+                      setEmergencyContacts([...emergencyContacts, {
+                        name: newSosName, phone: newSosPhone, relationship: newSosRel, isPrimary: emergencyContacts.length === 0
+                      }]);
+                      setNewSosName('');
+                      setNewSosPhone('');
+                    }}
+                    className="bg-primary text-white font-medium py-2 px-4 rounded-xl hover:bg-primary-dark transition-colors text-sm"
+                  >
+                    Add
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {emergencyContacts.map((contact, idx) => (
+                    <div key={idx} className="flex items-center justify-between bg-white p-3 rounded-xl border border-slate-100 shadow-sm">
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
+                          {idx + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">
+                            {contact.name}
+                            {contact.isPrimary && <span className="ml-2 text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded uppercase font-bold">Primary</span>}
+                          </p>
+                          <p className="text-xs text-slate-500">{contact.phone} • <span className="capitalize">{contact.relationship}</span></p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          const updated = emergencyContacts.filter((_, i) => i !== idx);
+                          if (updated.length > 0 && contact.isPrimary) {
+                            updated[0].isPrimary = true;
+                          }
+                          setEmergencyContacts(updated);
+                        }}
+                        className="text-slate-400 hover:text-red-500 p-2"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {emergencyContacts.length === 0 && (
+                    <p className="text-center text-xs text-slate-400 py-4 italic">No SOS contacts added yet.</p>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => saveSosMutation.mutate({ emergencyContacts, sosMessage })}
+                  disabled={saveSosMutation.isPending}
+                  className="w-full bg-red-500 text-white font-semibold py-2.5 rounded-xl hover:bg-red-600 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {saveSosMutation.isPending && <Loader2 size={14} className="animate-spin" />}
+                  Save SOS Settings
+                </button>
+              </div>
+            </div>
 
             <h4 className="section-label text-red-500 mb-3">Data Actions</h4>
             <div className="flex flex-col sm:flex-row gap-3">

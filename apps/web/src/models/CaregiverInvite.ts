@@ -19,10 +19,10 @@ const CaregiverInviteSchema = new Schema<ICaregiverInvite>({
   patientId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   caregiverEmail: { type: String, required: true, lowercase: true, trim: true },
   caregiverId: { type: Schema.Types.ObjectId, ref: 'User' },
-  relationship: { type: String, required: true },
+  relationship: { type: String, enum: ['Spouse','Parent','Child','Sibling','Nurse','Friend','Other'], required: true },
   status: { type: String, enum: ['pending', 'accepted', 'rejected', 'revoked'], default: 'pending' },
   token: { type: String, required: true, unique: true },
-  permissions: { type: [String], default: ['read_logs', 'receive_alerts'] },
+  permissions: { type: [String], default: ['view_medications','view_dose_logs','view_adherence','receive_alerts'] },
   expiresAt: { type: Date, default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) }, // 7 days
   acceptedAt: Date,
   message: String,

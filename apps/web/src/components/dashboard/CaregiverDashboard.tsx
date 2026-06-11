@@ -6,6 +6,8 @@ import { caregiverService } from '@/services/api';
 import { Pill, Activity, AlertCircle, ChevronRight, User as UserIcon, Heart, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { getSocket } from '@/lib/socket';
 
 const itemVariants = {
   hidden: { opacity: 0, y: 15 },
@@ -20,7 +22,42 @@ export default function CaregiverDashboard() {
     queryFn: () => caregiverService.getPatients(),
   });
 
-  const patients = response?.data?.patients || [];
+  const [livePatients, setLivePatients] = useState<any[]>([]);
+
+  // Sync state when query data changes
+  useEffect(() => {
+    if (response?.data?.patients) {
+      setLivePatients(response.data.patients);
+    }
+  }, [response?.data?.patients]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return;
+    
+    // In case getSocket returns undefined initially until initialization
+    // We can just rely on the fallback below, but getSocket ensures connection happens.
+    
+    // We actually need the connected instance
+    // Since getSocket initializes async, we can just fetch and connect directly here
+    fetch('/api/socket').then(() => {
+      import('socket.io-client').then(({ io }) => {
+        const socketInstance = io({ path: '/api/socket' });
+        
+        socketInstance.on('patient_status_update', (data) => {
+          setLivePatients((prev) => 
+            prev.map(p => p._id === data.patientId ? { ...p, ...data.updates } : p)
+          );
+        });
+
+        return () => {
+          socketInstance.disconnect();
+        };
+      });
+    });
+  }, []);
+
+  const patients = livePatients;
 
   return (
     <div className="space-y-8 max-w-[1400px] mx-auto w-full">
@@ -92,8 +129,34 @@ export default function CaregiverDashboard() {
                   </div>
                 </div>
 
-                {/* Activity Timeline */}
+                {/* Activity Timeline and Live Status */}
                 <div className="space-y-4">
+                  {/* Live Status Row */}
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        patient.liveStatus === 'taken' ? 'bg-emerald-500 animate-pulse' :
+                        patient.liveStatus === 'overdue' ? 'bg-red-500 animate-pulse' :
+                        'bg-slate-400'
+                      }`} />
+                      <div>
+                        <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">Live Status</p>
+                        <p className={`text-sm font-semibold ${
+                          patient.liveStatus === 'taken' ? 'text-emerald-600' :
+                          patient.liveStatus === 'overdue' ? 'text-red-600' :
+                          'text-slate-600'
+                        }`}>
+                          {patient.liveStatus === 'taken' ? 'Taken' : patient.liveStatus === 'overdue' ? 'Overdue' : 'Upcoming'}
+                        </p>
+                      </div>
+                    </div>
+                    {patient.lastSeen && (
+                      <span className="text-[10px] font-medium text-slate-500 italic">
+                        {patient.name} opened app {formatDistanceToNow(new Date(patient.lastSeen))} ago
+                      </span>
+                    )}
+                  </div>
+
                   <div className="flex items-center justify-between p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
                     <div className="flex items-center space-x-3">
                       <div className="p-2 bg-emerald-500 rounded-lg">

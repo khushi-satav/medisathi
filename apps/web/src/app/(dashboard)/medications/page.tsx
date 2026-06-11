@@ -92,8 +92,8 @@ export default function MedicationsPage() {
     if (!form.name || !form.dosage) { toast.error('Name and dosage are required'); return; }
     saveMutation.mutate({
       ...form,
-      totalQuantity: form.totalQuantity ? parseInt(form.totalQuantity) : undefined,
-      refillAt: form.refillAt ? parseInt(form.refillAt) : undefined,
+      stockCount: form.totalQuantity ? parseInt(form.totalQuantity) : undefined,
+      refillAlertDays: form.refillAt ? parseInt(form.refillAt) : undefined,
       endDate: form.endDate || undefined,
     });
   };
@@ -167,8 +167,20 @@ export default function MedicationsPage() {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                {med.totalQuantity && (
-                  <span className="text-sm font-semibold text-muted mr-3 bg-background px-3 py-1 rounded-lg border border-border">Stock: {med.currentQuantity ?? '—'}</span>
+                {med.stockCount !== undefined && (
+                  <span className={`text-sm font-semibold mr-3 px-3 py-1 rounded-lg border ${med.daysRemaining <= (med.refillAlertDays || 7) ? 'bg-red-50 text-red-600 border-red-200' : 'bg-background text-muted border-border'}`}>
+                    Stock: {med.stockCount} ({med.daysRemaining} days left)
+                  </span>
+                )}
+                {med.daysRemaining !== undefined && med.daysRemaining <= (med.refillAlertDays || 7) && (
+                  <a
+                    href={`https://www.google.com/maps/search/medical+stores+near+me`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mr-2 text-sm font-bold text-white bg-primary hover:bg-primary-dark px-3 py-1.5 rounded-lg transition-colors flex items-center"
+                  >
+                    Order Refill
+                  </a>
                 )}
                 <button onClick={() => toggleActive.mutate({ id: med._id, active: !med.isActive })}
                   className="p-2.5 rounded-xl hover:bg-secondary/10 text-muted transition-colors" title="Toggle active">

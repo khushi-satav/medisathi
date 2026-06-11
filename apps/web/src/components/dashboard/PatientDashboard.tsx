@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
-import { doseLogsService, insightsService, aiService } from '@/services/api';
-import { CheckCircle2, Clock, AlertCircle, Flame, Pill, TrendingUp, ChevronRight, Activity, Users, LogIn, Sparkles, Play, Pause, Volume2, RefreshCw } from 'lucide-react';
+import { doseLogsService, insightsService, aiService, medicationsService, sosService } from '@/services/api';
+import { CheckCircle2, Clock, AlertCircle, Flame, Pill, TrendingUp, ChevronRight, Activity, Users, LogIn, Sparkles, Play, Pause, Volume2, RefreshCw, ShieldAlert, ShoppingBag, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
+import { getSocket } from '@/lib/socket';
 
 function greeting() {
   const h = new Date().getHours();
@@ -289,13 +290,31 @@ export default function PatientDashboard() {
 
   const logDose = useMutation({
     mutationFn: (payload: any) => doseLogsService.log(payload),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       qc.invalidateQueries({ queryKey: ['dose-today'] });
       qc.invalidateQueries({ queryKey: ['insights-7'] });
       toast.success('✅ Dose recorded!');
+      
+      const socket = getSocket();
+      if (socket) {
+        socket.emit('patient_status_update', {
+          patientId: user?.id || user?._id,
+          updates: { lastTaken: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) }
+        });
+      }
     },
     onError: () => toast.error('Failed to log dose'),
   });
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (socket && user) {
+      socket.emit('patient_status_update', {
+        patientId: user.id || user._id,
+        updates: { lastSeen: 'Just now' }
+      });
+    }
+  }, [user]);
 
   const schedule = scheduleData?.data?.schedule ?? [];
   const todayStats = scheduleData?.data?.stats ?? { total: 0, taken: 0, missed: 0, adherencePct: 0 };
@@ -488,9 +507,11 @@ export default function PatientDashboard() {
             </div>
           </div>
           <AIRiskCard />
+          <RefillReminderCard />
           <CaregiverLoginCard />
         </div>
       </div>
+      <SOSButton />
     </div>
   );
 }
@@ -562,5 +583,87 @@ function AIRiskCard() {
         </div>
       )}
     </div>
+  );
+}
+
+function RefillReminderCard() {
+  const { data: medsData, isLoading } = useQuery({
+    queryKey: ['medications'],
+    queryFn: () => medicationsService.getAll(true),
+  });
+
+  const meds = medsData?.data?.medications || [];
+  const lowStockMeds = meds.filter((m: any) => m.stockCount <= (m.refillAlertDays || 7));
+
+  if (isLoading || lowStockMeds.length === 0) return null;
+
+  return (
+    <div className="bg-red-50 dark:bg-red-900/10 rounded-3xl shadow-sm border border-red-200 dark:border-red-800 p-6 md:p-8">
+      <div className="flex items-center space-x-3 mb-4">
+        <div className="p-2.5 bg-red-100 dark:bg-red-900/40 rounded-xl text-red-600 dark:text-red-400">
+          <AlertCircle size={22} />
+        </div>
+        <h3 className="font-bold text-red-900 dark:text-red-300 text-xl tracking-tight">Refill Reminder</h3>
+      </div>
+      <div className="space-y-4 mb-6">
+        {lowStockMeds.map((m: any) => (
+          <div key={m._id} className="bg-white/60 dark:bg-slate-800/60 p-3 rounded-xl border border-red-100 dark:border-red-900/50">
+            <p className="font-bold text-slate-800 dark:text-slate-200">{m.name} {m.dosage}</p>
+            <p className="text-sm text-red-600 dark:text-red-400 font-medium">Running low — {m.stockCount} left</p>
+          </div>
+        ))}
+      </div>
+      <a 
+        href="https://www.google.com/maps/search/medical+stores+near+me" 
+        target="_blank" 
+        rel="noreferrer"
+        className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-2xl shadow-sm transition-all flex items-center justify-center space-x-2 active:scale-[0.98]"
+      >
+        <ShoppingBag size={18} />
+        <span>Order Refill Nearby</span>
+      </a>
+    </div>
+  );
+}
+
+function SOSButton() {
+  const [loading, setLoading] = useState(false);
+
+  const handleSOS = () => {
+    if (!confirm('Are you sure you want to trigger an emergency SOS? This will alert all your caregivers.')) return;
+    setLoading(true);
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          sosService.triggerSOS({ latitude: pos.coords.latitude, longitude: pos.coords.longitude })
+            .then(() => toast.success('SOS Alert Sent!'))
+            .catch(() => toast.error('Failed to send SOS'))
+            .finally(() => setLoading(false));
+        },
+        () => {
+          sosService.triggerSOS()
+            .then(() => toast.success('SOS Alert Sent (No Location)'))
+            .catch(() => toast.error('Failed to send SOS'))
+            .finally(() => setLoading(false));
+        }
+      );
+    } else {
+      sosService.triggerSOS()
+        .then(() => toast.success('SOS Alert Sent!'))
+        .catch(() => toast.error('Failed to send SOS'))
+        .finally(() => setLoading(false));
+    }
+  };
+
+  return (
+    <button
+      onClick={handleSOS}
+      disabled={loading}
+      className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-50 bg-red-600 hover:bg-red-700 text-white p-4 md:p-6 rounded-full shadow-[0_8px_30px_rgb(220,38,38,0.4)] hover:shadow-[0_8px_40px_rgb(220,38,38,0.6)] transition-all active:scale-95 flex items-center justify-center group"
+      title="Emergency SOS"
+    >
+      <ShieldAlert size={36} className={`${loading ? 'animate-pulse' : 'group-hover:animate-bounce'}`} />
+    </button>
   );
 }

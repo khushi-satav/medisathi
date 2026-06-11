@@ -59,7 +59,7 @@ export default function ScanRxPage() {
       toast.success(`${count} medication${count !== 1 ? 's' : ''} added!`);
       setExtractedMeds([]); setPrescriptionId(null); setPreview(null); setStep(-1);
     },
-    onError: () => toast.error('Failed to add medications'),
+    onError: (err: any) => toast.error(err.response?.data?.error || err.message || 'Failed to add medications'),
   });
 
   const deleteMutation = useMutation({

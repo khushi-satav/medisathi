@@ -127,4 +127,10 @@ export const predictionsService = {
     api.get(`/predictions${medicationId ? `?medicationId=${medicationId}` : ''}`),
 };
 
+// ─── SOS ──────────────────────────────────────────────────────────────────────
+export const sosService = {
+  triggerSOS: (location?: { latitude: number; longitude: number }) =>
+    api.post('/sos', location),
+};
+
 export default api;

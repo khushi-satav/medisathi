@@ -131,10 +131,10 @@ export default function LoginPage() {
                   />
                   <button
                     type="button"
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors"
-                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors p-2 z-10"
+                    onClick={(e) => { e.preventDefault(); setShowPw(!showPw); }}
                   >
-                    {showPw ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {showPw ? <EyeOff size={20} className="pointer-events-none" /> : <Eye size={20} className="pointer-events-none" />}
                   </button>
                 </div>
               </div>

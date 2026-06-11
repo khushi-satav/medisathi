@@ -76,8 +76,8 @@ export async function POST(req: NextRequest) {
         // Update other details from OCR if provided, preserving existing ones if not
         if (med.genericName) existingMed.genericName = med.genericName;
         if (med.dosage) existingMed.dosage = med.dosage;
-        if (med.form) existingMed.form = med.form;
-        if (med.foodInstruction) existingMed.foodInstruction = med.foodInstruction;
+        if (med.form) existingMed.form = ['tablet','capsule','liquid','injection','drops','patch','inhaler','cream','other'].includes(med.form?.toLowerCase()) ? med.form.toLowerCase() : 'tablet';
+        if (med.foodInstruction) existingMed.foodInstruction = ['before_meal','after_meal','with_meal','empty_stomach','any_time'].includes(med.foodInstruction?.toLowerCase()) ? med.foodInstruction.toLowerCase() : 'after_meal';
         if (med.specialInstructions) existingMed.specialInstructions = med.specialInstructions;
         
         // Update prescription ID association
@@ -101,16 +101,16 @@ export async function POST(req: NextRequest) {
         const medication = await Medication.create({
           userId: user.id,
           name: cleanName,
-          genericName: med.genericName,
-          dosage: med.dosage,
-          form: med.form || 'tablet',
-          times: med.times || ['08:00'],
-          foodInstruction: med.foodInstruction || 'after_meal',
+          genericName: med.genericName || '',
+          dosage: med.dosage || '1 unit',
+          form: ['tablet','capsule','liquid','injection','drops','patch','inhaler','cream','other'].includes(med.form?.toLowerCase()) ? med.form.toLowerCase() : 'tablet',
+          times: med.times && med.times.length ? med.times : ['08:00'],
+          foodInstruction: ['before_meal','after_meal','with_meal','empty_stomach','any_time'].includes(med.foodInstruction?.toLowerCase()) ? med.foodInstruction.toLowerCase() : 'after_meal',
           startDate: new Date(),
           stockCount: med.quantity || 30,
           isOngoing: true,
           addedByOCR: true,
-          specialInstructions: med.specialInstructions,
+          specialInstructions: med.specialInstructions || '',
           prescriptionId: prescription._id,
           interactions: med.interactions || [],
           sideEffects: med.sideEffects || [],

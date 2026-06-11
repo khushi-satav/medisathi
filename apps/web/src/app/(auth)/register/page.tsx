@@ -173,8 +173,8 @@ function RegisterContent() {
                   <label className="label text-foreground font-semibold mb-1.5 block">Password *</label>
                   <div className="relative">
                     <input id="password" type={showPw ? 'text' : 'password'} className="input w-full pr-12 bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="Min. 6 characters" value={form.password} onChange={e => updateForm('password', e.target.value)} />
-                    <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors" onClick={() => setShowPw(!showPw)}>
-                      {showPw ? <EyeOff size={20} /> : <Eye size={20} />}
+                    <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-primary transition-colors p-2 z-10" onClick={(e) => { e.preventDefault(); setShowPw(!showPw); }}>
+                      {showPw ? <EyeOff size={20} className="pointer-events-none" /> : <Eye size={20} className="pointer-events-none" />}
                     </button>
                   </div>
                 </div>
