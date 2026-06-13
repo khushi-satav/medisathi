@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Server } from 'socket.io';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
@@ -17,6 +18,7 @@ export default function SocketHandler(req: NextApiRequest, res: NextApiResponseW
       addTrailingSlash: false,
     });
     res.socket.server.io = io;
+    (global as any).io = io;
 
     io.on('connection', (socket) => {
       console.log('A client connected:', socket.id);

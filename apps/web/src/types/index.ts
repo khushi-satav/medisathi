@@ -2,6 +2,8 @@
 
 export interface User {
   id: string;
+  /** MongoDB _id (same as id on the server, kept for interop) */
+  _id?: string;
   name: string;
   email: string;
   phone?: string;
@@ -12,6 +14,7 @@ export interface User {
   timezone: string;
   role: 'patient' | 'caregiver' | 'doctor' | 'admin';
   isVerified: boolean;
+  sosMessage?: string;
   conditions: Array<{
     name: string;
     icdCode?: string;
@@ -23,12 +26,19 @@ export interface User {
     relationship: string;
     isPrimary: boolean;
   }>;
+  /** Legacy singular alias — prefer emergencyContacts */
+  emergencyContact?: {
+    name: string;
+    phone: string;
+  };
   caregiverLinks: Array<{
     userId: string;
     relationship: string;
     permissions: string[];
     isActive: boolean;
   }>;
+  /** Free-form notification / app settings blob */
+  settings?: Record<string, any>;
   createdAt: string;
 }
 

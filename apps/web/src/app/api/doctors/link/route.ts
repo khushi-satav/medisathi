@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     // Check if link already exists
     const existingLinkIndex = patient.doctorLinks.findIndex(
-      (link) => link.doctorId.toString() === doctorId
+      (link: any) => link.doctorId.toString() === doctorId
     );
 
     if (existingLinkIndex > -1) {
@@ -96,7 +96,7 @@ export async function PATCH(req: NextRequest) {
 
     // Find the link
     const linkIndex = patient.doctorLinks.findIndex(
-      (link) => link.doctorId.toString() === doctorId
+      (link: any) => link.doctorId.toString() === doctorId
     );
 
     if (linkIndex === -1) {
@@ -134,7 +134,7 @@ export async function DELETE(req: NextRequest) {
       try {
         const body = await req.json();
         doctorId = body.doctorId;
-      } catch (e) {
+      } catch {
         // ignore
       }
     }
@@ -155,7 +155,7 @@ export async function DELETE(req: NextRequest) {
 
     const initialLength = patient.doctorLinks.length;
     patient.doctorLinks = patient.doctorLinks.filter(
-      (link) => link.doctorId.toString() !== doctorId
+      (link: any) => link.doctorId.toString() !== doctorId
     );
 
     if (patient.doctorLinks.length === initialLength) {

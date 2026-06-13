@@ -25,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const medication = await Medication.findOneAndUpdate(
       { _id: params.id, userId: user.id },
       body,
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!medication) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 

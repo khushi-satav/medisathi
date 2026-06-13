@@ -1,5 +1,7 @@
 'use client';
 
+import React from 'react';
+
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
@@ -9,7 +11,14 @@ import {
   LayoutDashboard, Pill, Settings, LogOut, ChevronRight, Calendar, LineChart, Users, ScanLine
 } from 'lucide-react';
 
-const patientNavItems = [
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  badge?: number | string;
+}
+
+const patientNavItems: NavItem[] = [
   { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/medications',     label: 'Medications',       icon: Pill },
   { href: '/dose-tracker',    label: 'Tracker',           icon: Calendar },
@@ -18,13 +27,13 @@ const patientNavItems = [
   { href: '/settings',        label: 'Settings',          icon: Settings },
 ];
 
-const caregiverNavItems = [
+const caregiverNavItems: NavItem[] = [
   { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/caregiver',       label: 'My Patients',       icon: Users },
   { href: '/settings',        label: 'Settings',          icon: Settings },
 ];
 
-const doctorNavItems = [
+const doctorNavItems: NavItem[] = [
   { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
   { href: '/doctor',          label: 'My Patients',       icon: Users },
   { href: '/settings',        label: 'Settings',          icon: Settings },
@@ -63,7 +72,8 @@ export default function Sidebar() {
       {/* Nav */}
       <nav className="flex-1 px-4 py-2 space-y-2 overflow-y-auto">
         {navItems.map(({ href, label, icon: Icon, badge }) => {
-          const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+          const currentPath = pathname ?? '';
+          const active = currentPath === href || (href !== '/dashboard' && currentPath.startsWith(href));
           return (
             <Link key={href} href={href} className="relative block group">
               {active && (

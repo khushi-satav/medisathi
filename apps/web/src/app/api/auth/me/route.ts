@@ -35,7 +35,7 @@ export async function PUT(req: NextRequest) {
     delete updates.role;
     delete updates.email;
 
-    const user = await User.findByIdAndUpdate(authUser.id, updates, { new: true }).select('-passwordHash');
+    const user = await User.findByIdAndUpdate(authUser.id, updates, { returnDocument: 'after' }).select('-passwordHash');
     return NextResponse.json({ user });
   } catch (error: any) {
     if (error.message === 'UNAUTHORIZED') {
@@ -56,7 +56,7 @@ export async function PATCH(req: NextRequest) {
     delete updates.role;
     delete updates.email;
 
-    const user = await User.findByIdAndUpdate(authUser.id, updates, { new: true }).select('-passwordHash');
+    const user = await User.findByIdAndUpdate(authUser.id, updates, { returnDocument: 'after' }).select('-passwordHash');
     return NextResponse.json({ user });
   } catch (error: any) {
     if (error.message === 'UNAUTHORIZED') {

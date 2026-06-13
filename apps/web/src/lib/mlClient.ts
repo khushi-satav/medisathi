@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * ML API Client
  * =============
@@ -100,7 +101,7 @@ export async function scanPrescription(
 } | null> {
   try {
     const formData = new FormData();
-    const blob = new Blob([imageBuffer], { type: mimeType });
+    const blob = new Blob([new Uint8Array(imageBuffer)], { type: mimeType });
     formData.append('file', blob, fileName);
 
     const res = await fetch(`${ML_API_URL}/scan-prescription`, {

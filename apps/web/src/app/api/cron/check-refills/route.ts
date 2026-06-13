@@ -1,11 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
+import { NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Medication from '@/models/Medication';
 import User from '@/models/User';
 import twilio from 'twilio';
 
 // This endpoint could be triggered daily by Vercel Cron or a similar service
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     // Optionally add a security token check here so only authorized cron can call
     // if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {

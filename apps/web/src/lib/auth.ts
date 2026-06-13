@@ -6,6 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'medisaathi-super-secret-key-change
 export interface JwtPayload {
   id: string;
   role: string;
+  phone?: string;
   iat?: number;
   exp?: number;
 }

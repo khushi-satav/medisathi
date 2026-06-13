@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -8,11 +8,11 @@ import { useAuthStore } from '@/store/authStore';
 import { authService } from '@/services/api';
 import { Eye, EyeOff, Pill, Activity, Shield } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const { login } = useAuthStore();
   const searchParams = useSearchParams();
-  const initialRole = searchParams.get('role') === 'caregiver' ? 'caregiver' : 'patient';
+  const initialRole = (searchParams?.get('role') === 'caregiver') ? 'caregiver' : 'patient';
   
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
@@ -179,6 +179,21 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center">
+          <Pill className="animate-spin text-primary mb-2" size={32} />
+          <span className="text-sm text-muted">Loading login page...</span>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
 

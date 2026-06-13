@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import DoseLog from '@/models/DoseLog';
 import Medication from '@/models/Medication';
-import AdherenceStats from '@/models/AdherenceStats';
 import { requireAuth } from '@/lib/auth';
 import User from '@/models/User';
 import { differenceInDays } from 'date-fns';

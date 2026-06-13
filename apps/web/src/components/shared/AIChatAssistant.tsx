@@ -4,7 +4,7 @@ import { useChatStore } from '@/store/chatStore';
 import { aiService } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, Loader2, Bot, Sparkles } from 'lucide-react';
+import { Send, Loader2, Bot, Sparkles } from 'lucide-react';
 
 export default function AIChatAssistant() {
   const { messages, addMessage } = useChatStore();
@@ -31,7 +31,7 @@ export default function AIChatAssistant() {
     try {
       const res = await aiService.ask(userMsg);
       addMessage({ role: 'ai', text: res.data.answer });
-    } catch (error) {
+    } catch {
       addMessage({ role: 'ai', text: 'Sorry, I am having trouble connecting right now.' });
     } finally {
       setIsLoading(false);

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import CaregiverInvite from '@/models/CaregiverInvite';
-import User from '@/models/User';
 
 export async function GET(req: NextRequest) {
   try {

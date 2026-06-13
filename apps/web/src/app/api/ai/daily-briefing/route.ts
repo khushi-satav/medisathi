@@ -40,7 +40,6 @@ export async function POST(req: NextRequest) {
     // --- MODIFICATION: Fetch Risk Level for Briefing ---
     let riskInfo = "Risk: Low";
     try {
-      const mlApiUrl = process.env.ML_API_URL || 'http://localhost:8000';
       const riskRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/ai/predict`, {
         headers: { 'Cookie': req.headers.get('cookie') || '' } // Pass cookies for auth if needed
       });

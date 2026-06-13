@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const updatedUser = await User.findByIdAndUpdate(
       userPayload.id,
       { $set: updateObj },
-      { new: true }
+      { returnDocument: 'after' }
     ).select('-passwordHash');
 
     if (!updatedUser) {

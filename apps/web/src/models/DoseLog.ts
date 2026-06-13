@@ -7,6 +7,7 @@ export interface IDoseLog extends Document {
   scheduledDate: string;
   takenAt?: Date;
   status: 'taken' | 'missed' | 'skipped' | 'snoozed' | 'pending';
+  notifLevel: number;
   skipReason?: string;
   snoozedUntil?: Date;
   loggedBy?: mongoose.Types.ObjectId;
@@ -26,6 +27,7 @@ const DoseLogSchema = new Schema<IDoseLog>({
     enum: ['taken','missed','skipped','snoozed','pending'],
     default: 'pending',
   },
+  notifLevel: { type: Number, default: 0 },
   skipReason: String,
   snoozedUntil: Date,
   loggedBy: { type: Schema.Types.ObjectId, ref: 'User' },

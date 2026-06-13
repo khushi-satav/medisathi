@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { X, Camera, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -12,18 +12,18 @@ interface CameraModalProps {
 export default function CameraModal({ onCapture, onClose }: CameraModalProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
 
-  const startCamera = async () => {
+  const startCamera = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     // Stop any existing stream
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
     }
 
     try {
@@ -32,7 +32,7 @@ export default function CameraModal({ onCapture, onClose }: CameraModalProps) {
         audio: false
       });
       
-      setStream(newStream);
+      streamRef.current = newStream;
       if (videoRef.current) {
         videoRef.current.srcObject = newStream;
       }
@@ -42,16 +42,16 @@ export default function CameraModal({ onCapture, onClose }: CameraModalProps) {
       setError('Could not access camera. Please ensure you have given permission.');
       setLoading(false);
     }
-  };
+  }, [facingMode]);
 
   useEffect(() => {
     startCamera();
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
     };
-  }, [facingMode]);
+  }, [startCamera]);
 
   const toggleCamera = () => {
     setFacingMode(prev => prev === 'user' ? 'environment' : 'user');

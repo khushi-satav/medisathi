@@ -38,7 +38,7 @@ function formatScheduledTime(isoString: string) {
       minute: '2-digit',
       hour12: true,
     });
-  } catch (e) {
+  } catch {
     return isoString;
   }
 }
@@ -51,7 +51,7 @@ export default function DoseTrackerPage() {
 
   const dateStr = formatDate(selectedDate);
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['dose-tracker', dateStr],
     queryFn: () => doseLogsService.getToday(dateStr),
   });
@@ -77,7 +77,7 @@ export default function DoseTrackerPage() {
     if (nd <= new Date()) setSelectedDate(nd);
   };
 
-  const isFuture = formatDate(selectedDate) > formatDate(new Date());
+
 
   const groups = STATUSES.reduce((acc, s) => {
     const items = schedule.filter((d: any) => d.status === s);

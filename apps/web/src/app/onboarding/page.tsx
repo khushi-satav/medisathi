@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
 import {
-  Pill, Heart, Users, UserPlus, ChevronRight, ChevronLeft,
+  Pill, Heart, Users, ChevronRight, ChevronLeft,
   CheckCircle2, Plus, Trash2, ArrowRight, Sparkles, Phone, Scan,
 } from 'lucide-react';
 
@@ -46,7 +46,7 @@ function StepWelcome({ name }: { name: string }) {
         Namaste, {name?.split(' ')[0]} 🙏
       </h2>
       <p className="text-slate-500 text-lg leading-relaxed mb-8 max-w-sm mx-auto">
-        Let's set up your <strong className="text-slate-700">MediSaathi</strong> profile so we can give you
+        Let&apos;s set up your <strong className="text-slate-700">MediSaathi</strong> profile so we can give you
         the most personalised medication experience.
       </p>
       <div className="space-y-3 text-left max-w-xs mx-auto">
@@ -218,7 +218,7 @@ function StepCaregiver({ caregiverEmail, setCaregiverEmail }: {
       </p>
 
       <div className="mb-6">
-        <label className="label">Caregiver's Email Address</label>
+        <label className="label">Caregiver&apos;s Email Address</label>
         <div className="flex space-x-2">
           <input
             className="input flex-1"
@@ -228,7 +228,7 @@ function StepCaregiver({ caregiverEmail, setCaregiverEmail }: {
             onChange={e => setCaregiverEmail(e.target.value)}
           />
         </div>
-        <p className="text-xs text-slate-400 mt-2">They'll receive an invite to create a MediSaathi caregiver account.</p>
+        <p className="text-xs text-slate-400 mt-2">They&apos;ll receive an invite to create a MediSaathi caregiver account.</p>
       </div>
 
       <div className="bg-violet-50 border border-violet-100 rounded-2xl p-5 space-y-3">
@@ -256,7 +256,7 @@ function StepCaregiver({ caregiverEmail, setCaregiverEmail }: {
 /* ─── Main Onboarding Page ─────────────────────────────────────────────── */
 export default function OnboardingPage() {
   const router = useRouter();
-  const { user, token, updateUser } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
 
   const [step, setStep]                   = useState(1);
   const [conditions, setConditions]       = useState<Condition[]>([]);

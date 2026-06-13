@@ -3,19 +3,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { insightsService } from '@/services/api';
-import { TrendingUp, TrendingDown, Flame, CheckCircle2, XCircle, BarChart3 } from 'lucide-react';
+import { TrendingUp, Flame, CheckCircle2, XCircle, BarChart3 } from 'lucide-react';
 
 type Period = 7 | 30 | 90;
-
-function BarMini({ pct, color }: { pct: number; color: string }) {
-  return (
-    <div className="flex flex-col items-center space-y-1">
-      <div className="w-5 bg-slate-100 rounded-sm overflow-hidden" style={{ height: 48 }}>
-        <div className={`w-full rounded-sm transition-all duration-700 ${color}`} style={{ height: `${pct}%`, marginTop: `${100 - pct}%` }} />
-      </div>
-    </div>
-  );
-}
 
 export default function InsightsPage() {
   const [period, setPeriod] = useState<Period>(30);
@@ -31,7 +21,6 @@ export default function InsightsPage() {
     totalDoses = 0,
     takenDoses = 0,
     missedDoses = 0,
-    skippedDoses = 0,
     currentStreak = 0,
     longestStreak = 0,
     dailyTrend = [],

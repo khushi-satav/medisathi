@@ -13,9 +13,9 @@ function RegisterContent() {
   const router = useRouter();
   const { login } = useAuthStore();
   const searchParams = useSearchParams();
-  const inviteToken = searchParams.get('inviteToken');
-  const queryEmail = searchParams.get('email');
-  const queryRole = searchParams.get('role');
+  const inviteToken = searchParams?.get('inviteToken');
+  const queryEmail = searchParams?.get('email');
+  const queryRole = searchParams?.get('role');
 
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
@@ -110,8 +110,7 @@ function RegisterContent() {
 
         {/* Steps indicator */}
         <div className="flex items-center justify-center mb-10 space-x-3">
-          {[1, s => s].map((_, i) => {
-            const s = i + 1;
+          {[1, 2].map((s) => {
             return (
               <div key={s} className="flex items-center">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all shadow-sm ${

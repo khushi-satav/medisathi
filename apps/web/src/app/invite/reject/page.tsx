@@ -1,16 +1,15 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { Pill, AlertTriangle, XCircle, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
 function RejectInviteContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const token = searchParams.get('token') || '';
+  const token = searchParams?.get('token') || '';
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

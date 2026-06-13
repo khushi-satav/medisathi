@@ -1,21 +1,22 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '@/store/authStore';
+
 import { caregiverService } from '@/services/api';
 import { Pill, Activity, AlertCircle, ChevronRight, User as UserIcon, Heart, Calendar } from 'lucide-react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import Image from 'next/image';
+import { motion, type Variants } from 'framer-motion';
+import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { getSocket } from '@/lib/socket';
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+  show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } }
 };
 
 export default function CaregiverDashboard() {
-  const { user } = useAuthStore();
 
   const { data: response, isLoading } = useQuery({
     queryKey: ['caregiver-patients'],
@@ -94,7 +95,7 @@ export default function CaregiverDashboard() {
                 <div className="flex items-start justify-between mb-8">
                   <div className="flex items-center space-x-5">
                     <div className="relative">
-                      <img src={patient.profilePhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(patient.name)}&background=random`} alt={patient.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-primary/20 shadow-sm" />
+                      <Image src={patient.profilePhoto || `https://ui-avatars.com/api/?name=${encodeURIComponent(patient.name)}&background=random`} alt={patient.name} className="w-16 h-16 rounded-2xl object-cover border-2 border-primary/20 shadow-sm" width={64} height={64} unoptimized />
                       <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-emerald-500 border-2 border-card rounded-full flex items-center justify-center">
                         <Heart size={12} className="text-white fill-white" />
                       </div>

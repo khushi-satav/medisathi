@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
+import Image from 'next/image';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { prescriptionsService } from '@/services/api';
-import { Upload, Scan, FileText, CheckCircle2, Plus, X, Loader2, Camera, FlaskConical, ShieldCheck, Brain, Zap, Globe, Eye, ChevronRight, AlertTriangle, Info } from 'lucide-react';
+import { Upload, Scan, FileText, CheckCircle2, Plus, X, Loader2, Camera, ShieldCheck, Brain, Zap, Globe, ChevronRight, AlertTriangle, Info } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CameraModal from '@/components/shared/CameraModal';
 
@@ -13,11 +14,7 @@ type ExtractedMed = {
   confidence?: number; pillColor?: string;
 };
 
-const DEMO_MEDS: ExtractedMed[] = [
-  { name: 'Metformin', dosage: '500mg', frequency: 'Twice daily', duration: '30 days', instructions: 'After meal', selected: true, confidence: 97, pillColor: '#6366f1' },
-  { name: 'Amlodipine', dosage: '5mg', frequency: 'Once daily', duration: '30 days', instructions: 'Morning', selected: true, confidence: 94, pillColor: '#10b981' },
-  { name: 'Pantoprazole', dosage: '40mg', frequency: 'Once daily', duration: '14 days', instructions: 'Before meal', selected: true, confidence: 91, pillColor: '#f59e0b' },
-];
+
 
 const STEPS = [
   { icon: '✔', label: 'Upload Complete', color: '#10b981' },
@@ -100,15 +97,7 @@ export default function ScanRxPage() {
     } finally { setUploading(false); }
   };
 
-  const loadDemo = () => {
-    setPreview(null);
-    setExtractedMeds(DEMO_MEDS);
-    setPrescriptionId('demo');
-    setUploading(true);
-    animateSteps();
-    setTimeout(() => setUploading(false), 3500);
-    toast.success('Demo prescription loaded!');
-  };
+
 
   const toggleMed = (i: number) => setExtractedMeds(p => p.map((m, idx) => idx === i ? { ...m, selected: !m.selected } : m));
 
@@ -130,7 +119,7 @@ export default function ScanRxPage() {
       } else {
         toast.error(data.error || 'FDA data not found for this drug.');
       }
-    } catch (err) {
+    } catch {
       toast.error('Failed to fetch from FDA.');
     } finally {
       setFetchingFda(null);
@@ -196,7 +185,7 @@ export default function ScanRxPage() {
               </div>
             ) : preview ? (
               <div className="p-3 flex flex-col items-center justify-center h-full">
-                <img src={preview} alt="Rx" className="max-h-44 rounded-xl object-contain shadow-lg" />
+                <Image src={preview} alt="Rx" className="max-h-44 rounded-xl object-contain shadow-lg" width={300} height={176} unoptimized />
                 <p className="text-secondary-dark text-xs mt-2">Click to upload another</p>
                 <button onClick={() => fileRef.current?.click()} className="mt-2 text-xs bg-primary/30 border border-primary/30 text-secondary-dark px-3 py-1 rounded-full hover:bg-primary/50 transition-all">Replace Image</button>
               </div>

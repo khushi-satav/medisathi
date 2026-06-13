@@ -5,6 +5,7 @@ import Medication from '@/models/Medication';
 import AdherenceStats from '@/models/AdherenceStats';
 import { requireAuth } from '@/lib/auth';
 import { logDoseToML } from '@/lib/mlClient';
+import { createEscalation, resolveEscalation } from '@/services/escalationService';
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
         skipReason: skipReason || undefined,
         snoozedUntil: snoozedUntil ? new Date(snoozedUntil) : undefined,
       },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // Decrement stock if taken
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     const stats = await AdherenceStats.findOneAndUpdate(
       { userId: user.id, date: scheduledDate },
       { totalDoses, takenDoses, missedDoses, skippedDoses, adherenceRate },
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: 'after' }
     );
 
     // Fire-and-forget: send dose data to ML API for retraining
@@ -67,18 +68,17 @@ export async function POST(req: NextRequest) {
     // --- MODIFICATION: Escalation on Missed Dose ---
     if (status === 'missed' || status === 'overdue') {
       try {
-        const med = await Medication.findById(medicationId);
-        await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/escalation`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            patientId: user.id,
-            message: `Emergency Alert from MediSaathi. You missed your scheduled dose of ${med?.name || 'medication'}. Please take it immediately or contact your caregiver.`
-          })
-        });
-        console.log('🚨 Escalation call triggered');
+        await createEscalation(user.id, medicationId, log._id, new Date(scheduledTime));
+        console.log('🚨 Escalation workflow started');
       } catch (escErr) {
         console.error('⚠️ Escalation trigger failed:', escErr);
+      }
+    } else if (status === 'taken' || status === 'skipped' || status === 'snoozed') {
+      try {
+        await resolveEscalation(log._id);
+        console.log('✅ Escalation resolved/cancelled');
+      } catch (escErr) {
+        console.error('⚠️ Escalation resolution failed:', escErr);
       }
     }
 

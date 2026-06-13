@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 export interface IUser extends Document {
   email: string;
   phone?: string;
+  fcmToken?: string;
   passwordHash: string;
   name: string;
   age?: number;
@@ -68,6 +69,7 @@ export interface IUser extends Document {
 const UserSchema = new Schema<IUser>({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   phone: { type: String, unique: true, sparse: true },
+  fcmToken: { type: String },
   passwordHash: { type: String, required: true },
   name: { type: String, required: true, trim: true },
   age: Number,

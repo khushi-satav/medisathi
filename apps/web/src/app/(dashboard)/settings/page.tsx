@@ -9,8 +9,6 @@ import {
   Bell,
   Shield,
   Smartphone,
-  Save,
-  LogOut,
   ChevronDown,
   Activity,
   Calendar,
@@ -26,7 +24,6 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
 import CaregiverConnect from '@/components/settings/CaregiverConnect';
 import {
   LineChart,
@@ -42,11 +39,7 @@ import {
 
 type Tab = 'progress' | 'notifications' | 'privacy';
 
-const formatPhone = (num: string) => {
-  if (!num) return '';
-  if (num.startsWith('+91')) return num;
-  return `+91 ${num.slice(0,5)} ${num.slice(5)}`;
-};
+
 
 const MealLoggingRing = ({ percentage }: { percentage: number }) => {
   const circumference = 2 * Math.PI * 16; // radius 16
@@ -84,9 +77,118 @@ const bloodSugarData = [
   { day: 'Sun', value: 112 },
 ];
 
+// ─── Module-level sub-components (MUST be outside the page fn to keep stable identity) ───
+const SectionHeader = ({
+  icon, title, subtitle, color,
+}: { icon: string; title: string; subtitle: string; color: string }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', gap: '12px',
+    padding: '14px 18px',
+    background: `${color}12`,
+    borderRadius: '12px',
+    marginBottom: '4px',
+  }}>
+    <div style={{
+      width: '36px', height: '36px', borderRadius: '10px',
+      background: `${color}22`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '18px',
+    }}>{icon}</div>
+    <div>
+      <div style={{ fontWeight: 700, fontSize: '15px', color: '#1A1A2E' }}>{title}</div>
+      <div style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '2px' }}>{subtitle}</div>
+    </div>
+  </div>
+);
+
+const NotificationToggle = ({
+  icon, title, desc, enabled, onChange, badge, impact,
+}: {
+  icon: string; title: string; desc: string;
+  enabled: boolean; onChange: (v: boolean) => void;
+  badge?: 'Recommended' | 'New' | 'Pro';
+  impact?: 'High' | 'Medium' | 'Low';
+}) => (
+  <div
+    style={{
+      display: 'flex', alignItems: 'center', gap: '14px',
+      padding: '16px 18px',
+      background: enabled ? '#FFF8F5' : '#FAFAFA',
+      border: `1.5px solid ${enabled ? '#E8532B30' : '#E5E7EB'}`,
+      borderRadius: '14px',
+      marginBottom: '10px',
+      transition: 'all 0.2s ease',
+      cursor: 'pointer',
+      boxShadow: enabled ? '0 2px 8px rgba(232,83,43,0.08)' : 'none',
+    }}
+    onClick={() => onChange(!enabled)}
+  >
+    {/* Icon */}
+    <div style={{
+      width: '42px', height: '42px', borderRadius: '12px',
+      background: enabled ? '#E8532B15' : '#F3F4F6',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: '20px', flexShrink: 0, transition: 'all 0.2s',
+    }}>{icon}</div>
+
+    {/* Text */}
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+        <span style={{ fontWeight: 600, fontSize: '14px', color: '#1A1A2E' }}>{title}</span>
+        {badge && (
+          <span style={{
+            fontSize: '10px', fontWeight: 700,
+            padding: '2px 8px', borderRadius: '20px',
+            background: badge === 'Recommended' ? '#E8532B' : badge === 'New' ? '#10B981' : '#6C63FF',
+            color: 'white', letterSpacing: '0.3px',
+          }}>{badge}</span>
+        )}
+      </div>
+      <div style={{ fontSize: '12px', color: '#9CA3AF', lineHeight: 1.4 }}>{desc}</div>
+      {impact && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '5px' }}>
+          <div style={{
+            width: '6px', height: '6px', borderRadius: '50%',
+            background: impact === 'High' ? '#EF4444' : impact === 'Medium' ? '#F5A623' : '#10B981',
+          }}/>
+          <span style={{ fontSize: '11px', color: '#9CA3AF' }}>{impact} priority</span>
+        </div>
+      )}
+    </div>
+
+    {/* Toggle switch */}
+    <div style={{ flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+      <label style={{ position: 'relative', display: 'inline-block', width: '48px', height: '26px' }}>
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={e => onChange(e.target.checked)}
+          style={{ opacity: 0, width: 0, height: 0 }}
+        />
+        <span style={{
+          position: 'absolute', inset: 0,
+          background: enabled ? '#E8532B' : '#D1D5DB',
+          borderRadius: '13px', cursor: 'pointer',
+          transition: 'all 0.25s',
+          boxShadow: enabled ? '0 0 8px rgba(232,83,43,0.3)' : 'none',
+        }}>
+          <span style={{
+            position: 'absolute',
+            width: '20px', height: '20px',
+            background: 'white', borderRadius: '50%',
+            top: '3px',
+            left: enabled ? '25px' : '3px',
+            transition: 'left 0.25s',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+          }}/>
+        </span>
+      </label>
+    </div>
+  </div>
+);
+
 export default function SettingsPage() {
-  const { user, updateUser, logout } = useAuthStore();
-  const router = useRouter();
+  const { user, updateUser } = useAuthStore();
   const [tab, setTab] = useState<Tab>('progress');
   const [profile, setProfile] = useState({
     name: user?.name || '',
@@ -98,9 +200,7 @@ export default function SettingsPage() {
   });
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [caregiverEmail, setCaregiverEmail] = useState('');
-  const [relationship, setRelationship] = useState('parent');
-  const [inviteMessage, setInviteMessage] = useState('');
+
 
   // SOS Contacts state
   const [emergencyContacts, setEmergencyContacts] = useState<{name: string; phone: string; relationship: string; isPrimary: boolean}[]>(user?.emergencyContacts || []);
@@ -180,19 +280,7 @@ export default function SettingsPage() {
     },
   });
 
-  // 3. Mutates: Invite, Respond, Revoke/Disconnect
-  const inviteMutation = useMutation({
-    mutationFn: (data: { email: string; relationship: string; message?: string }) =>
-      api.post('/caregiver/invite', data),
-    onSuccess: () => {
-      toast.success('Invitation sent successfully!');
-      setCaregiverEmail('');
-      setInviteMessage('');
-      refetchInvites();
-    },
-    onError: (err: any) =>
-      toast.error(err.response?.data?.error || 'Failed to send invitation'),
-  });
+
 
   const respondMutation = useMutation({
     mutationFn: (data: { token: string; action: 'accept' | 'reject' }) =>
@@ -260,11 +348,7 @@ export default function SettingsPage() {
     },
   });
 
-  const toggleSetting = (key: string) => {
-    const currentSettings = dbUser?.settings || {};
-    const newVal = !currentSettings[key];
-    updateSettingsMutation.mutate({ [key]: newVal });
-  };
+
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,11 +366,7 @@ export default function SettingsPage() {
     });
   };
 
-  const handleLogout = () => {
-    logout();
-    toast.success('Signed out');
-    router.push('/login');
-  };
+
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: 'progress', label: 'Progress', icon: <User size={16} /> },
@@ -294,74 +374,7 @@ export default function SettingsPage() {
     { id: 'privacy', label: 'Privacy & Sharing', icon: <Shield size={16} /> },
   ];
 
-  // Map settings keys to readable labels and descriptions
-  const notificationOptions = [
-    {
-      category: 'Medication Alerts',
-      items: [
-        {
-          key: 'insulin_reminders',
-          label: 'Insulin Reminders',
-          desc: "Get notified when it's time for insulin doses",
-        },
-        {
-          key: 'appointment_reminders',
-          label: 'Appointment Reminders',
-          desc: 'Get alerted for upcoming doctor visits',
-        },
-        {
-          key: 'refill_alerts',
-          label: 'Prescription Refills',
-          desc: 'Alerts when prescription quantities run low',
-        },
-      ],
-    },
-    {
-      category: 'Lifestyle & Care',
-      items: [
-        {
-          key: 'meal_reminders',
-          label: 'Meal Reminders',
-          desc: 'Reminders to log daily breakfast, lunch, and dinner',
-        },
-        {
-          key: 'mood_checkins',
-          label: 'Mood Check-ins',
-          desc: 'Daily prompts to log your mood and well-being',
-        },
-        {
-          key: 'weekly_report',
-          label: 'Weekly PDF Reports',
-          desc: 'Receive detailed weekly health and adherence reports',
-        },
-      ],
-    },
-    {
-      category: 'Smart Caregiver Features',
-      items: [
-        {
-          key: 'school_mode',
-          label: 'School Mode',
-          desc: 'Automatically mute notifications during school or work hours',
-        },
-        {
-          key: 'smart_timing',
-          label: 'Smart Timing (AI)',
-          desc: 'Optimize notification delivery times based on AI prediction',
-        },
-        {
-          key: 'caregiver_alerts',
-          label: 'Caregiver Alerts',
-          desc: 'Enable instant sharing of updates with your connected caregivers',
-        },
-        {
-          key: 'missed_dose_escalation',
-          label: 'Missed Dose Escalation',
-          desc: 'Escalate and send SMS alerts to caregivers if doses are missed by 30 mins',
-        },
-      ],
-    },
-  ];
+
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6 pb-24">
@@ -496,148 +509,346 @@ export default function SettingsPage() {
       )}
 
       {/* Notifications Tab */}
-      {tab === 'notifications' && (
-        <div className="card space-y-6">
-          <div>
-            <h3 className="card-title">Notification Preferences</h3>
-            <p className="body-text mt-1">Configure how and when MediSaathi notifies you</p>
-          </div>
+      {tab === 'notifications' && (() => {
+        // ── helpers ──────────────────────────────────────────────────────────
+        const settings = dbUser?.settings || {};
 
-          <div className="space-y-6">
-            {notificationOptions.map((section, idx) => (
-              <div key={idx} className="space-y-3">
-                <p className="section-label">{section.category}</p>
-                <div className="space-y-2">
-                  {section.items.map((item) => {
-                    const isEnabled = !!dbUser?.settings?.[item.key];
-                    const isSavingThis =
-                      updateSettingsMutation.isPending &&
-                      updateSettingsMutation.variables &&
-                      item.key in (updateSettingsMutation.variables as any);
+        const updateSetting = (key: string, value: any) => {
+          updateSettingsMutation.mutate({ [key]: value });
+        };
 
-                    return (
-                      <div
-                        key={item.key}
-                        className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="pr-4">
-                          <p className="font-medium text-slate-800 text-sm">{item.label}</p>
-                          <p className="text-xs text-slate-500 mt-0.5">{item.desc}</p>
-                        </div>
-                        <button
-                          disabled={updateSettingsMutation.isPending}
-                          className={`relative w-11 h-6 rounded-full transition-colors flex items-center justify-between ${
-                            isEnabled ? 'bg-primary' : 'bg-slate-300'
-                          } ${updateSettingsMutation.isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
-                          onClick={() => toggleSetting(item.key)}
-                        >
-                          <span
-                            className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                              isEnabled ? 'left-5.5' : 'left-0.5'
-                            } flex items-center justify-center`}
-                          >
-                            {isSavingThis && (
-                              <Loader2 size={10} className="text-primary animate-spin" />
-                            )}
-                          </span>
-                        </button>
-                      </div>
-                    );
-                  })}
+        const allToggleKeys = [
+          'insulin_reminders', 'appointment_reminders', 'refill_alerts',
+          'meal_reminders', 'mood_checkins',
+          'school_mode', 'smart_timing', 'caregiver_alerts', 'missed_dose_escalation',
+        ];
+        const enabledCount = allToggleKeys.filter(k => !!settings[k]).length;
+        const totalCount   = allToggleKeys.length;
+
+        const phoneNumber = user?.phone
+          ? (user.phone.startsWith('+91') ? user.phone.slice(3).trim() : user.phone)
+          : '';
+
+        const sendTestSMS  = () => sendTestSMSMutation.mutate();
+        const removePhone  = () => saveMutation.mutate({ ...profile, phone: undefined });
+
+        // ── render ───────────────────────────────────────────────────────────
+        return (
+          <div className="space-y-2">
+
+            {/* ① Gradient banner header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #E8532B 0%, #F5A623 100%)',
+              borderRadius: '16px',
+              padding: '24px',
+              marginBottom: '8px',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize: '12px', opacity: 0.85, letterSpacing: '1px',
+                              fontWeight: 600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  🔔 Notification Center
                 </div>
+                <h2 style={{ fontSize: '22px', fontWeight: 800, margin: 0 }}>
+                  Stay on top of your health
+                </h2>
+                <p style={{ margin: '6px 0 0', opacity: 0.85, fontSize: '14px' }}>
+                  Configure alerts so you never miss a dose
+                </p>
               </div>
-            ))}
-
-            <div className="pt-2 flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50">
-              <span className="text-sm font-medium text-slate-700">Advance Reminder Time</span>
-              <select
-                value={dbUser?.settings?.advance_reminder_time || 15}
-                onChange={(e) =>
-                  updateSettingsMutation.mutate({
-                    advance_reminder_time: parseInt(e.target.value),
-                  })
-                }
-                className="bg-white border border-slate-200 text-slate-700 text-sm rounded-lg focus:ring-primary focus:border-primary block p-2 outline-none"
-              >
-                <option value={5}>5 minutes before</option>
-                <option value={10}>10 minutes before</option>
-                <option value={15}>15 minutes before</option>
-                <option value={30}>30 minutes before</option>
-              </select>
+              <div style={{
+                background: 'rgba(255,255,255,0.2)',
+                borderRadius: '12px',
+                padding: '12px 18px',
+                textAlign: 'center',
+                backdropFilter: 'blur(10px)',
+              }}>
+                <div style={{ fontSize: '24px', fontWeight: 800 }}>{enabledCount}/{totalCount}</div>
+                <div style={{ fontSize: '11px', opacity: 0.9 }}>alerts active</div>
+              </div>
             </div>
-          </div>
 
-          <div className="pt-4">
-            <div
-              className="cta-card"
-              style={{
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                borderRadius: '16px',
-                padding: '24px',
-                color: 'white',
-                boxShadow: '0 10px 25px -5px rgba(102, 126, 234, 0.4)',
-              }}
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                  <span className="text-2xl">📱</span>
-                </div>
+            {/* ② Medication Alerts */}
+            <SectionHeader
+              icon="💊"
+              title="Medication Alerts"
+              subtitle="Critical dose and prescription reminders"
+              color="#E8532B"
+            />
+            <NotificationToggle
+              icon="💉" title="Insulin Reminders"
+              desc="Get notified exactly when it's time for insulin doses"
+              enabled={!!settings.insulin_reminders}
+              onChange={v => updateSetting('insulin_reminders', v)}
+              badge="Recommended" impact="High"
+            />
+            <NotificationToggle
+              icon="🏥" title="Appointment Reminders"
+              desc="Upcoming doctor appointments and check-ups"
+              enabled={!!settings.appointment_reminders}
+              onChange={v => updateSetting('appointment_reminders', v)}
+              impact="High"
+            />
+            <NotificationToggle
+              icon="📦" title="Prescription Refills"
+              desc="Alert when medicine stock drops below 7 days supply"
+              enabled={!!settings.refill_alerts}
+              onChange={v => updateSetting('refill_alerts', v)}
+              badge="New" impact="Medium"
+            />
+
+            {/* ③ Lifestyle & Care */}
+            <SectionHeader
+              icon="🌿"
+              title="Lifestyle & Care"
+              subtitle="Daily wellness and habit tracking"
+              color="#10B981"
+            />
+            <NotificationToggle
+              icon="🍽️" title="Meal Reminders"
+              desc="Reminders to log breakfast, lunch, and dinner"
+              enabled={!!settings.meal_reminders}
+              onChange={v => updateSetting('meal_reminders', v)}
+              impact="Medium"
+            />
+            <NotificationToggle
+              icon="😊" title="Mood Check-ins"
+              desc="Daily prompts to log your mood and wellbeing"
+              enabled={!!settings.mood_checkins}
+              onChange={v => updateSetting('mood_checkins', v)}
+              impact="Low"
+            />
+
+            {/* ④ Smart Features */}
+            <SectionHeader
+              icon="🤖"
+              title="Smart Features"
+              subtitle="AI-powered and caregiver notifications"
+              color="#6C63FF"
+            />
+            <NotificationToggle
+              icon="🤫" title="School Mode"
+              desc="Silently mute all alerts during school or work hours"
+              enabled={!!settings.school_mode}
+              onChange={v => updateSetting('school_mode', v)}
+              impact="Low"
+            />
+            <NotificationToggle
+              icon="🤖" title="Smart Timing (AI)"
+              desc="AI learns when you're most likely to miss doses and optimises reminder timing"
+              enabled={!!settings.smart_timing}
+              onChange={v => updateSetting('smart_timing', v)}
+              badge="Recommended" impact="High"
+            />
+            <NotificationToggle
+              icon="👥" title="Caregiver Alerts"
+              desc="Instantly share missed dose updates with your connected caregivers"
+              enabled={!!settings.caregiver_alerts}
+              onChange={v => updateSetting('caregiver_alerts', v)}
+              impact="High"
+            />
+            <NotificationToggle
+              icon="📞" title="Missed Dose Escalation"
+              desc="Automated phone call + caregiver SMS if dose missed by 30+ minutes"
+              enabled={!!settings.missed_dose_escalation}
+              onChange={v => updateSetting('missed_dose_escalation', v)}
+              badge="Recommended" impact="High"
+            />
+
+            {/* ⑤ Advance Reminder Time — pill selector */}
+            <div style={{
+              padding: '18px',
+              background: 'white',
+              border: '1.5px solid #E5E7EB',
+              borderRadius: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginTop: '16px',
+              flexWrap: 'wrap',
+              gap: '12px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '42px', height: '42px', borderRadius: '12px',
+                  background: '#E8532B15',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '20px',
+                }}>⏰</div>
                 <div>
-                  <h4 className="font-bold text-lg">Enable SMS Alerts</h4>
-                  <p className="text-white/80 text-sm mt-1">Get real Twilio SMS reminders on your phone</p>
+                  <div style={{ fontWeight: 600, fontSize: '14px' }}>Advance Reminder Time</div>
+                  <div style={{ fontSize: '12px', color: '#9CA3AF' }}>
+                    How early to send the reminder before dose time
+                  </div>
                 </div>
               </div>
-
-              {!user?.phone ? (
-                <div className="mt-6 flex flex-col gap-3">
-                  <input
-                    type="tel"
-                    placeholder="+91 9876543210"
-                    value={profile.phone}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl text-slate-800 outline-none"
-                  />
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {[5, 10, 15, 30].map(min => (
                   <button
-                    onClick={handleSave}
-                    disabled={saveMutation.isPending}
-                    className="bg-white text-primary font-semibold w-full py-3 rounded-xl hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
-                  >
-                    {saveMutation.isPending ? 'Saving...' : 'Save & Enable →'}
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-6 flex flex-col gap-3">
-                  <div className="bg-white/20 px-4 py-3 rounded-xl font-medium flex justify-between items-center">
-                    <span>{formatPhone(user.phone)}</span>
-                    <div className="flex items-center">
-                      <span className="text-xs bg-emerald-500 px-2 py-1 rounded text-white shadow-sm border border-emerald-400">
-                        Active
-                      </span>
-                      <button 
-                        onClick={() => sendTestSMSMutation.mutate()}
-                        disabled={sendTestSMSMutation.isPending}
-                        className="text-xs text-white/70 underline ml-2 hover:text-white transition-colors disabled:opacity-50"
+                    key={min}
+                    onClick={() => updateSetting('advance_reminder_time', min)}
+                    style={{
+                      padding: '8px 14px', borderRadius: '20px',
+                      border: `1.5px solid ${(settings.advance_reminder_time ?? 15) === min ? '#E8532B' : '#E5E7EB'}`,
+                      background: (settings.advance_reminder_time ?? 15) === min ? '#E8532B' : 'white',
+                      color: (settings.advance_reminder_time ?? 15) === min ? 'white' : '#6B7280',
+                      fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >{min}m</button>
+                ))}
+              </div>
+            </div>
+
+            {/* ⑥ SMS Alerts — upgraded gradient card */}
+            <div style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '20px',
+              padding: '24px',
+              marginTop: '24px',
+              color: 'white',
+              position: 'relative',
+              overflow: 'hidden',
+            }}>
+              {/* Decorative circles */}
+              <div style={{
+                position: 'absolute', top: '-20px', right: '-20px',
+                width: '100px', height: '100px', borderRadius: '50%',
+                background: 'rgba(255,255,255,0.1)',
+              }}/>
+              <div style={{
+                position: 'absolute', bottom: '-30px', right: '60px',
+                width: '80px', height: '80px', borderRadius: '50%',
+                background: 'rgba(255,255,255,0.08)',
+              }}/>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', position: 'relative' }}>
+                <div style={{
+                  width: '52px', height: '52px', borderRadius: '16px',
+                  background: 'rgba(255,255,255,0.2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '24px', flexShrink: 0,
+                }}>📱</div>
+
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: 800 }}>
+                    Enable SMS Alerts
+                  </h3>
+                  <p style={{ margin: '0 0 16px', opacity: 0.85, fontSize: '13px', lineHeight: 1.5 }}>
+                    Get real Twilio SMS reminders on your phone. Even when the app is closed.
+                  </p>
+
+                  {phoneNumber ? (
+                    <div>
+                      <div style={{
+                        background: 'rgba(255,255,255,0.15)',
+                        borderRadius: '12px',
+                        padding: '12px 16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        marginBottom: '12px',
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '16px' }}>+91 {phoneNumber}</div>
+                          <div style={{ fontSize: '11px', opacity: 0.8, marginTop: '2px' }}>
+                            ✅ Verified &amp; Active
+                          </div>
+                        </div>
+                        <div style={{
+                          background: '#10B981', color: 'white',
+                          padding: '6px 14px', borderRadius: '20px',
+                          fontSize: '12px', fontWeight: 700,
+                        }}>ACTIVE</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                        <button
+                          onClick={sendTestSMS}
+                          disabled={sendTestSMSMutation.isPending}
+                          style={{
+                            flex: 1, padding: '10px',
+                            background: 'rgba(255,255,255,0.2)',
+                            border: '1px solid rgba(255,255,255,0.3)',
+                            borderRadius: '10px', color: 'white',
+                            fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+                          }}
+                        >
+                          {sendTestSMSMutation.isPending ? 'Sending…' : '📨 Send Test SMS'}
+                        </button>
+                        <button
+                          onClick={removePhone}
+                          disabled={saveMutation.isPending}
+                          style={{
+                            padding: '10px 20px',
+                            background: 'rgba(239,68,68,0.25)',
+                            border: '1px solid rgba(239,68,68,0.4)',
+                            borderRadius: '10px', color: 'white',
+                            fontWeight: 600, fontSize: '13px', cursor: 'pointer',
+                          }}
+                        >Remove</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <input
+                        type="tel"
+                        placeholder="+91 98765 43210"
+                        value={profile.phone}
+                        onChange={e => setProfile({ ...profile, phone: e.target.value })}
+                        style={{
+                          flex: 1, padding: '12px 16px',
+                          background: 'rgba(255,255,255,0.15)',
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          borderRadius: '10px', color: 'white',
+                          fontSize: '14px', outline: 'none',
+                        }}
+                      />
+                      <button
+                        onClick={handleSave}
+                        disabled={saveMutation.isPending}
+                        style={{
+                          padding: '12px 20px',
+                          background: 'white', color: '#764ba2',
+                          border: 'none', borderRadius: '10px',
+                          fontWeight: 700, fontSize: '13px', cursor: 'pointer',
+                        }}
                       >
-                        {sendTestSMSMutation.isPending ? 'Sending...' : 'Send test SMS'}
+                        {saveMutation.isPending ? 'Saving…' : 'Add Number →'}
                       </button>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        saveMutation.mutate({ ...profile, phone: undefined });
-                      }}
-                      className="text-white/80 text-sm hover:text-white underline"
-                    >
-                      Remove
-                    </button>
-                  </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
+
+            {/* ⑦ Quick Stats summary */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '12px', marginTop: '24px', padding: '16px',
+              background: '#F9FAFB', borderRadius: '14px',
+              border: '1px solid #E5E7EB',
+            }}>
+              {[
+                { icon: '✅', label: 'Active alerts',  value: `${enabledCount}` },
+                { icon: '📱', label: 'SMS status',     value: phoneNumber ? 'Connected' : 'Not set' },
+                { icon: '⚡', label: 'Escalation',     value: settings.missed_dose_escalation ? 'On' : 'Off' },
+              ].map(stat => (
+                <div key={stat.label} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '20px', marginBottom: '4px' }}>{stat.icon}</div>
+                  <div style={{ fontSize: '16px', fontWeight: 700, color: '#1A1A2E' }}>{stat.value}</div>
+                  <div style={{ fontSize: '11px', color: '#9CA3AF' }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Privacy & Sharing Tab */}
       {tab === 'privacy' && (
@@ -753,7 +964,7 @@ export default function SettingsPage() {
                           </p>
                           {invite.message && (
                             <p className="text-[11px] text-slate-500 italic mt-1 bg-slate-50 p-1.5 rounded border border-slate-100">
-                              "{invite.message}"
+                              &quot;{invite.message}&quot;
                             </p>
                           )}
                         </div>

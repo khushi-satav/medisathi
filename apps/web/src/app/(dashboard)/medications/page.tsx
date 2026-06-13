@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { medicationsService } from '@/services/api';
-import { Plus, Pill, Edit2, Trash2, ToggleLeft, ToggleRight, Clock, X, ChevronDown } from 'lucide-react';
+import { Plus, Pill, Edit2, Trash2, ToggleLeft, ToggleRight, Clock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const FREQUENCIES = ['once_daily', 'twice_daily', 'three_times_daily', 'four_times_daily', 'every_other_day', 'weekly', 'as_needed'];

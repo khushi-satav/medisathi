@@ -5,7 +5,7 @@ import User from '@/models/User';
 
 export async function GET(req: NextRequest) {
   try {
-    const userPayload = requireAuth(req);
+    requireAuth(req);
     await connectDB();
 
     const doctors = await User.find({ role: 'doctor' })

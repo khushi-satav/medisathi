@@ -39,7 +39,8 @@ export default function MobileTabBar() {
     <nav className="fixed bottom-0 left-0 right-0 bg-card border-t border-border flex items-center justify-around px-2 pb-safe z-50 md:hidden shadow-[0_-4px_24px_rgba(75,46,43,0.06)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 8px)', paddingTop: 8 }}>
       {tabs.map(({ href, label, icon: Icon, center }) => {
-        const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+        const currentPath = pathname ?? '';
+        const active = currentPath === href || (href !== '/dashboard' && currentPath.startsWith(href));
         if (center) {
           return (
             <Link key={href} href={href}

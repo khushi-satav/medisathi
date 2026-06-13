@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { doseLogsService, insightsService, aiService, medicationsService, sosService } from '@/services/api';
-import { CheckCircle2, Clock, AlertCircle, Flame, Pill, TrendingUp, ChevronRight, Activity, Users, LogIn, Sparkles, Play, Pause, Volume2, RefreshCw, ShieldAlert, ShoppingBag, MapPin } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, Flame, Pill, ChevronRight, Activity, Users, LogIn, Sparkles, Play, Pause, RefreshCw, ShieldAlert, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { getSocket } from '@/lib/socket';
 
 function greeting() {
@@ -27,7 +27,7 @@ function formatScheduledTime(isoString: string) {
       minute: '2-digit',
       hour12: true,
     });
-  } catch (e) {
+  } catch {
     return isoString;
   }
 }
@@ -87,9 +87,9 @@ const DOT_COLORS: Record<string, string> = {
   upcoming: 'bg-muted',
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 15 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+  show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } }
 };
 
 function AIBriefingCard() {
@@ -290,7 +290,7 @@ export default function PatientDashboard() {
 
   const logDose = useMutation({
     mutationFn: (payload: any) => doseLogsService.log(payload),
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dose-today'] });
       qc.invalidateQueries({ queryKey: ['insights-7'] });
       toast.success('✅ Dose recorded!');
@@ -357,7 +357,7 @@ export default function PatientDashboard() {
                 </Link>
               ) : (
                 <div>
-                  <p className="text-white/80 text-sm font-medium mb-1">Today's progress</p>
+                  <p className="text-white/80 text-sm font-medium mb-1">Today&apos;s progress</p>
                   <h2 className="text-white text-3xl md:text-4xl font-extrabold tracking-tight">
                     {taken} <span className="text-white/60 text-2xl font-semibold">/ {todayStats.total} doses taken</span>
                   </h2>

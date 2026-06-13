@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * MediSaathi — Database Seed Script
  * Run: node src/seed/seed.js
@@ -136,7 +137,7 @@ async function seed() {
         ],
       },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
 
   console.log(`   ✅ User ID: ${user._id}  | Email: sunita@gmail.com | Password: Sunita@123`);
@@ -162,7 +163,7 @@ async function seed() {
         gender: 'female',
       }
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
 
   const doctor2 = await User.findOneAndUpdate(
@@ -180,7 +181,7 @@ async function seed() {
         gender: 'male',
       }
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
 
   console.log(`   ✅ Doctor 1: ${doctor1.name} (ID: ${doctor1._id})`);
@@ -209,7 +210,7 @@ async function seed() {
         }],
       },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
 
   // Link Sunita to Anil and doctors
@@ -257,7 +258,7 @@ async function seed() {
           addedByOCR: false,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     ),
     Medication.findOneAndUpdate(
       { userId: user._id, name: 'Amlodipine' },
@@ -282,7 +283,7 @@ async function seed() {
           addedByOCR: false,
         },
       },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
     ),
   ]);
 
@@ -323,7 +324,7 @@ async function seed() {
         },
       },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
 
   console.log(`   ✅ Prescription ID: ${prescription._id}`);
@@ -357,7 +358,7 @@ async function seed() {
   ];
 
   for (const { filter, data } of doseLogs) {
-    const log = await DoseLog.findOneAndUpdate(filter, { $setOnInsert: data }, { upsert: true, new: true, setDefaultsOnInsert: true });
+    const log = await DoseLog.findOneAndUpdate(filter, { $setOnInsert: data }, { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true });
     console.log(`   ✅ DoseLog: ${data.status.toUpperCase()} — ${(await Medication.findById(data.medicationId))?.name} @ ${data.scheduledDate}`);
   }
 
@@ -378,7 +379,7 @@ async function seed() {
         streakDay: 12,
       },
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
   );
 
   console.log(`   ✅ AdherenceStats: ${stats.adherenceRate}% adherence on ${stats.date}`);

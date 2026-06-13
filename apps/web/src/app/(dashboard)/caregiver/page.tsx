@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/services/api';
 import toast from 'react-hot-toast';
 import {
-  Users, Activity, Bell, CheckCircle2, XCircle, Clock, AlertTriangle,
-  TrendingUp, Pill, Phone, RefreshCw, ChevronRight, Heart,
+  Users, Activity, Clock, AlertTriangle,
+  TrendingUp, Phone, RefreshCw, Heart,
 } from 'lucide-react';
 
 /* ─── Types ────────────────────────────────────────────────────────────── */
@@ -125,37 +125,36 @@ function PatientCard({ p, onEscalate }: { p: PatientSummary; onEscalate: (id: st
   );
 }
 
+// Demo data fallback for presentation
+const DEMO_PATIENTS: PatientSummary[] = [
+  {
+    _id: 'demo-1', name: 'Sunita Devi', age: 68, phone: '+91 98765 43210',
+    conditions: [{ name: 'Diabetes (Type 2)' }, { name: 'Hypertension' }],
+    todayAdherence: 33, streak: 2, missedToday: 2, riskLevel: 'high',
+  },
+  {
+    _id: 'demo-2', name: 'Ramesh Kumar', age: 74, phone: '+91 87654 32109',
+    conditions: [{ name: 'Heart Disease' }, { name: 'Thyroid' }],
+    todayAdherence: 67, streak: 5, missedToday: 1, riskLevel: 'medium',
+  },
+  {
+    _id: 'demo-3', name: 'Meera Singh', age: 55, phone: '+91 76543 21098',
+    conditions: [{ name: 'Asthma' }],
+    todayAdherence: 100, streak: 14, missedToday: 0, riskLevel: 'low',
+  },
+];
+
 /* ─── Main Caregiver Page ──────────────────────────────────────────────── */
 export default function CaregiverPage() {
   const router = useRouter();
-  const { user, token, isAuthenticated } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   const [patients, setPatients] = useState<PatientSummary[]>([]);
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [escalating, setEscalating]   = useState<string | null>(null);
 
-  // Demo data fallback for presentation
-  const DEMO_PATIENTS: PatientSummary[] = [
-    {
-      _id: 'demo-1', name: 'Sunita Devi', age: 68, phone: '+91 98765 43210',
-      conditions: [{ name: 'Diabetes (Type 2)' }, { name: 'Hypertension' }],
-      todayAdherence: 33, streak: 2, missedToday: 2, riskLevel: 'high',
-    },
-    {
-      _id: 'demo-2', name: 'Ramesh Kumar', age: 74, phone: '+91 87654 32109',
-      conditions: [{ name: 'Heart Disease' }, { name: 'Thyroid' }],
-      todayAdherence: 67, streak: 5, missedToday: 1, riskLevel: 'medium',
-    },
-    {
-      _id: 'demo-3', name: 'Meera Singh', age: 55, phone: '+91 76543 21098',
-      conditions: [{ name: 'Asthma' }],
-      todayAdherence: 100, streak: 14, missedToday: 0, riskLevel: 'low',
-    },
-  ];
-
-  const fetchPatients = async (showRefresh = false) => {
+  const fetchPatients = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
     else setLoading(true);
     try {
@@ -169,17 +168,16 @@ export default function CaregiverPage() {
       setRefreshing(false);
       setLastUpdated(new Date());
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated) { router.replace('/login'); return; }
     fetchPatients();
     const interval = setInterval(() => fetchPatients(true), 60_000); // refresh every minute
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, fetchPatients, router]);
 
   const handleEscalate = async (patientId: string, name: string) => {
-    setEscalating(patientId);
     try {
       await api.post('/escalation', {
         patientId,
@@ -188,8 +186,6 @@ export default function CaregiverPage() {
       toast.success(`Escalation call initiated for ${name}`);
     } catch {
       toast.error('Escalation call failed — check Twilio configuration');
-    } finally {
-      setEscalating(null);
     }
   };
 

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import connectDB from '@/lib/mongoose';
 import Prescription from '@/models/Prescription';
-import Medication from '@/models/Medication';
 import { scanPrescription } from '@/lib/mlClient';
 import fs from 'fs';
 import path from 'path';

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
-  Pill, Shield, Bell, Brain, Users, ChevronRight, Star,
+  Pill, Bell, Brain, Users, ChevronRight, Star,
   ArrowRight, CheckCircle, Scan, TrendingUp, Heart, Zap, Globe, Phone,
 } from 'lucide-react';
 
@@ -183,7 +183,7 @@ export default function LandingPage() {
           {/* Badge */}
           <div className="inline-flex items-center space-x-2 bg-card border border-primary/20 shadow-soft rounded-full px-4 py-2 mb-8">
             <Zap size={14} className="text-warning" />
-            <span className="text-sm text-primary-dark font-semibold">India's AI-powered medication companion</span>
+            <span className="text-sm text-primary-dark font-semibold">India&apos;s AI-powered medication companion</span>
           </div>
 
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight mb-6 text-foreground">
@@ -260,7 +260,7 @@ export default function LandingPage() {
             </div>
             <div>
               <p className="text-primary font-bold uppercase tracking-wider mb-1 text-xs">The Problem We Solve</p>
-              <h2 className="text-2xl font-bold text-foreground">Meet Sunita — she's one of millions</h2>
+              <h2 className="text-2xl font-bold text-foreground">Meet Sunita — she&apos;s one of millions</h2>
             </div>
           </div>
           <p className="text-muted leading-relaxed text-lg relative z-10 font-medium">
@@ -326,7 +326,7 @@ export default function LandingPage() {
                     <Star key={j} size={16} className="fill-warning text-warning" />
                   ))}
                 </div>
-                <p className="text-foreground font-medium leading-relaxed mb-8 italic">"{t.quote}"</p>
+                <p className="text-foreground font-medium leading-relaxed mb-8 italic">&quot;{t.quote}&quot;</p>
                 <div className="flex items-center space-x-4 mt-auto">
                   <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white text-sm font-bold shadow-sm border-2 border-white`}>
                     {t.avatar}
@@ -352,7 +352,7 @@ export default function LandingPage() {
             <Phone size={32} className="text-white" />
           </div>
           <h2 className="text-4xl md:text-5xl font-extrabold mb-6 text-foreground leading-tight">
-            Your family's health<br />
+            Your family&apos;s health<br />
             <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">starts here</span>
           </h2>
           <p className="text-muted font-medium text-lg mb-10 max-w-xl mx-auto">

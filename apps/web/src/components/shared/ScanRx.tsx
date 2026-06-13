@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { Upload, CheckCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import { prescriptionsService } from '@/services/api';

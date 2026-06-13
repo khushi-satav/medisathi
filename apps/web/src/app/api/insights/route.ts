@@ -144,13 +144,6 @@ export async function GET(req: NextRequest) {
     // Active medications count
     const activeMeds = await Medication.countDocuments({ userId: user.id, isActive: true });
 
-    // Medications needing refill
-    const meds = await Medication.find({ userId: user.id, isActive: true });
-    const needsRefill = meds.filter(m => {
-      const daysLeft = m.times.length > 0 ? Math.floor(m.stockCount / m.times.length) : 0;
-      return daysLeft <= m.refillAlertDays;
-    }).length;
-
     // By Medication
     const logs = await DoseLog.find({
       userId: user.id,
