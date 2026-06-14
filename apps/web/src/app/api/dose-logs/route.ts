@@ -20,23 +20,33 @@ export async function POST(req: NextRequest) {
 
     const scheduledDate = new Date(scheduledTime).toISOString().split('T')[0];
 
+    // Find the existing log first (to check previous status)
+    const existingLog = await DoseLog.findOne({
+      medicationId,
+      scheduledDate,
+      scheduledTime: new Date(scheduledTime),
+    });
+    const prevStatus = existingLog?.status;
+
     const log = await DoseLog.findOneAndUpdate(
       { medicationId, scheduledDate, scheduledTime: new Date(scheduledTime) },
       {
-        userId: user.id,
-        medicationId,
-        scheduledDate,
-        scheduledTime: new Date(scheduledTime),
-        status,
-        takenAt: status === 'taken' ? new Date() : undefined,
-        skipReason: skipReason || undefined,
-        snoozedUntil: snoozedUntil ? new Date(snoozedUntil) : undefined,
+        $set: {
+          userId: user.id,
+          medicationId,
+          scheduledDate,
+          scheduledTime: new Date(scheduledTime),
+          status,
+          takenAt: status === 'taken' ? new Date() : undefined,
+          skipReason: skipReason || undefined,
+          snoozedUntil: snoozedUntil ? new Date(snoozedUntil) : undefined,
+        },
       },
-      { upsert: true, returnDocument: 'after' }
+      { upsert: true, returnDocument: 'after', new: true }
     );
 
-    // Decrement stock if taken
-    if (status === 'taken') {
+    // Decrement stock ONLY if transitioning TO taken (guard against double-log)
+    if (status === 'taken' && prevStatus !== 'taken') {
       await Medication.findByIdAndUpdate(medicationId, { $inc: { stockCount: -1 } });
     }
 
@@ -65,15 +75,17 @@ export async function POST(req: NextRequest) {
       dayOfWeek: scheduledDt.getDay(),
     });
 
-    // --- MODIFICATION: Escalation on Missed Dose ---
-    if (status === 'missed' || status === 'overdue') {
+    // --- Escalation logic ---
+    // Only start escalation if this is a new miss (wasn't already escalated)
+    if (status === 'missed') {
       try {
         await createEscalation(user.id, medicationId, log._id, new Date(scheduledTime));
-        console.log('🚨 Escalation workflow started');
+        console.log('🚨 Escalation workflow started for missed dose');
       } catch (escErr) {
         console.error('⚠️ Escalation trigger failed:', escErr);
       }
-    } else if (status === 'taken' || status === 'skipped' || status === 'snoozed') {
+    } else if (['taken', 'skipped', 'snoozed'].includes(status)) {
+      // Resolve any active escalation when user acknowledges the dose
       try {
         await resolveEscalation(log._id);
         console.log('✅ Escalation resolved/cancelled');

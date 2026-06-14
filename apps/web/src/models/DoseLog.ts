@@ -24,7 +24,7 @@ const DoseLogSchema = new Schema<IDoseLog>({
   takenAt: Date,
   status: {
     type: String,
-    enum: ['taken','missed','skipped','snoozed','pending'],
+    enum: ['taken','missed','skipped','snoozed','pending','overdue'],
     default: 'pending',
   },
   notifLevel: { type: Number, default: 0 },
