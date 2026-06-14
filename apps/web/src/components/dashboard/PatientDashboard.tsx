@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import { doseLogsService, insightsService, aiService, medicationsService, sosService } from '@/services/api';
-import { CheckCircle2, Clock, AlertCircle, Flame, Pill, ChevronRight, Activity, Users, LogIn, Sparkles, Play, Pause, RefreshCw, ShieldAlert, ShoppingBag } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, Flame, Pill, ChevronRight, Activity, Sparkles, Play, Pause, RefreshCw, ShieldAlert, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -407,7 +407,7 @@ export default function PatientDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8">
         
         {/* Today's schedule */}
-        <motion.div variants={itemVariants} className="xl:col-span-2 bg-card rounded-3xl shadow-card border border-border overflow-hidden flex flex-col h-full">
+        <motion.div variants={itemVariants} className="xl:col-span-2 bg-card rounded-3xl shadow-card border border-border overflow-hidden flex flex-col h-fit">
           <div className="p-6 md:p-8 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-foreground">Today&apos;s Schedule</h2>
@@ -508,7 +508,6 @@ export default function PatientDashboard() {
           </div>
           <AIRiskCard />
           <RefillReminderCard />
-          <CaregiverLoginCard />
         </div>
       </div>
       <SOSButton />
@@ -516,45 +515,7 @@ export default function PatientDashboard() {
   );
 }
 
-function CaregiverLoginCard() {
-  const router = useRouter();
-  const { logout } = useAuthStore();
 
-  const handleCaregiverLogin = () => {
-    logout();
-    router.push('/login?role=caregiver');
-  };
-
-  return (
-    <motion.div 
-      variants={itemVariants}
-      className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-950/20 dark:to-blue-900/10 rounded-3xl shadow-sm border border-blue-100 dark:border-blue-900/30 p-6 md:p-8 relative overflow-hidden"
-    >
-      <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-200/20 rounded-full blur-2xl" />
-      
-      <div className="relative z-10">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="p-2.5 bg-blue-500/10 rounded-xl">
-            <Users size={22} className="text-blue-600" />
-          </div>
-          <h3 className="font-bold text-foreground text-xl tracking-tight">Caregiver Access</h3>
-        </div>
-        
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed font-medium">
-          Are you monitoring this patient? Switch to the caregiver portal to track doses and receive alerts.
-        </p>
-        
-        <button 
-          onClick={handleCaregiverLogin}
-          className="w-full group bg-white dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-blue-600 font-bold py-3.5 px-4 rounded-2xl border border-blue-200 dark:border-blue-800 shadow-sm transition-all flex items-center justify-center space-x-2 active:scale-[0.98]"
-        >
-          <LogIn size={18} className="transition-transform group-hover:translate-x-0.5" />
-          <span>Caregiver Login</span>
-        </button>
-      </div>
-    </motion.div>
-  );
-}
 
 function AIRiskCard() {
   const { data: riskData, isLoading } = useQuery({

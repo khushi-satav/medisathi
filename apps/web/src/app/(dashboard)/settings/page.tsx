@@ -5,15 +5,10 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import api, { authService, doctorService } from '@/services/api';
 import {
-  User,
   Bell,
   Shield,
   Smartphone,
   ChevronDown,
-  Activity,
-  Calendar,
-  Utensils,
-  Smile,
   Mail,
   Check,
   X,
@@ -25,57 +20,12 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CaregiverConnect from '@/components/settings/CaregiverConnect';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-  ReferenceArea,
-  ReferenceLine,
-} from 'recharts';
 
-type Tab = 'progress' | 'notifications' | 'privacy';
+type Tab = 'notifications' | 'privacy';
 
 
 
-const MealLoggingRing = ({ percentage }: { percentage: number }) => {
-  const circumference = 2 * Math.PI * 16; // radius 16
-  const offset = circumference - (percentage / 100) * circumference;
-  return (
-    <svg width="40" height="40" viewBox="0 0 40 40">
-      {/* Background circle */}
-      <circle cx="20" cy="20" r="16" fill="none" stroke="#F3E8DC" strokeWidth="4"/>
-      {/* Progress circle */}
-      <circle
-        cx="20" cy="20" r="16"
-        fill="none"
-        stroke="#E8532B"
-        strokeWidth="4"
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-        strokeLinecap="round"
-        transform="rotate(-90 20 20)"
-      />
-      {/* Percentage text inside */}
-      <text x="20" y="24" textAnchor="middle" fontSize="10" fill="#E8532B" fontWeight="bold">
-        {percentage}%
-      </text>
-    </svg>
-  );
-};
 
-const bloodSugarData = [
-  { day: 'Mon', value: 108 },
-  { day: 'Tue', value: 115 },
-  { day: 'Wed', value: 102 },
-  { day: 'Thu', value: 118 },
-  { day: 'Fri', value: 110 },
-  { day: 'Sat', value: 105 },
-  { day: 'Sun', value: 112 },
-];
 
 // ─── Module-level sub-components (MUST be outside the page fn to keep stable identity) ───
 const SectionHeader = ({
@@ -189,7 +139,7 @@ const NotificationToggle = ({
 
 export default function SettingsPage() {
   const { user, updateUser } = useAuthStore();
-  const [tab, setTab] = useState<Tab>('progress');
+  const [tab, setTab] = useState<Tab>('notifications');
   const [profile, setProfile] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -369,7 +319,6 @@ export default function SettingsPage() {
 
 
   const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'progress', label: 'Progress', icon: <User size={16} /> },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={16} /> },
     { id: 'privacy', label: 'Privacy & Sharing', icon: <Shield size={16} /> },
   ];
@@ -401,112 +350,7 @@ export default function SettingsPage() {
         ))}
       </div>
 
-      {/* Progress Tab */}
-      {tab === 'progress' && (
-        <div className="card space-y-6">
-          <h3 className="card-title">Progress Dashboard</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 relative overflow-hidden group hover:-translate-y-1 transition-transform">
-              <div className="flex items-center gap-2 mb-2">
-                <Activity size={16} className="text-primary" />
-                <p className="text-sm font-medium text-slate-500">Blood Sugar</p>
-              </div>
-              <p className="text-2xl font-bold text-slate-800">
-                110 <span className="text-sm text-slate-500 font-normal">mg/dL</span>
-              </p>
-              <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-700">
-                Normal range
-              </div>
-            </div>
 
-            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 relative overflow-hidden group hover:-translate-y-1 transition-transform">
-              <div className="flex items-center gap-2 mb-2">
-                <Calendar size={16} className="text-orange-500" />
-                <p className="text-sm font-medium text-slate-500">Logging Streak</p>
-              </div>
-              <p className="text-2xl font-bold text-slate-800">
-                14 <span className="text-sm text-slate-500 font-normal">Days</span> 🔥
-              </p>
-              <div className="mt-2 flex gap-1">
-                {[1, 1, 1, 1, 1, 1, 1].map((_, i) => (
-                  <div key={i} className="w-4 h-4 rounded-sm bg-orange-400"></div>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 relative overflow-hidden group hover:-translate-y-1 transition-transform">
-              <div className="flex items-center gap-2 mb-2">
-                <Utensils size={16} className="text-emerald-500" />
-                <p className="text-sm font-medium text-slate-500">Meal Logging</p>
-              </div>
-              <div className="flex items-center gap-4 mt-1">
-                <MealLoggingRing percentage={85} />
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50 relative overflow-hidden group hover:-translate-y-1 transition-transform">
-              <div className="flex items-center gap-2 mb-2">
-                <Smile size={16} className="text-primary" />
-                <p className="text-sm font-medium text-slate-500">Most Common Mood</p>
-              </div>
-              <p className="text-xl font-bold text-slate-800 mt-1">Energetic 😊</p>
-              <div className="mt-2 h-4 flex items-end gap-1">
-                <div className="w-full h-[40%] bg-secondary rounded-t-sm"></div>
-                <div className="w-full h-[60%] bg-secondary-dark rounded-t-sm"></div>
-                <div className="w-full h-[50%] bg-secondary rounded-t-sm"></div>
-                <div className="w-full h-[90%] bg-primary rounded-t-sm"></div>
-                <div className="w-full h-[100%] bg-primary rounded-t-sm"></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4">
-            <h4 className="text-sm font-semibold text-slate-700 mb-4">Blood Sugar Trend (Last 7 Days)</h4>
-            <div className="h-64 rounded-xl border border-slate-100 bg-white p-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={bloodSugarData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[60, 160]} tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
-                  <RechartsTooltip
-                    contentStyle={{
-                      borderRadius: '8px',
-                      border: 'none',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                    }}
-                  />
-                  <ReferenceArea 
-                    y1={70} y2={140} 
-                    fill="#10B981" 
-                    fillOpacity={0.05} 
-                    label={{ value: "Normal Range", position: "insideTopLeft", fontSize: 10, fill: "#10B981" }}
-                  />
-                  <ReferenceLine 
-                    y={140} 
-                    stroke="#EF4444" 
-                    strokeDasharray="3 3" 
-                    label={{ value: "High", position: "right", fontSize: 10, fill: "#EF4444" }}
-                  />
-                  <ReferenceLine 
-                    y={70} 
-                    stroke="#EF4444" 
-                    strokeDasharray="3 3"
-                    label={{ value: "Low", position: "right", fontSize: 10, fill: "#EF4444" }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#6C63FF"
-                    strokeWidth={3}
-                    dot={{ fill: '#6C63FF', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Notifications Tab */}
       {tab === 'notifications' && (() => {
