@@ -6,7 +6,6 @@ import { useAuthStore } from '@/store/authStore';
 import { doseLogsService, insightsService, aiService, medicationsService, sosService } from '@/services/api';
 import { CheckCircle2, Clock, AlertCircle, Flame, Pill, ChevronRight, Activity, Sparkles, Play, Pause, RefreshCw, ShieldAlert, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { getSocket } from '@/lib/socket';
