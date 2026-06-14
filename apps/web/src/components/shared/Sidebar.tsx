@@ -58,7 +58,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-border flex flex-col z-30 shadow-soft">
+    <aside className="h-full w-64 bg-sidebar border-r border-border flex flex-col shadow-soft overflow-y-auto">
       {/* Logo */}
       <div className="flex items-center space-x-3 px-6 py-8">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-warm">
