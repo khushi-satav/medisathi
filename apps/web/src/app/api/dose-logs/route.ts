@@ -18,7 +18,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'medicationId, status, and scheduledTime are required' }, { status: 400 });
     }
 
-    const scheduledDate = new Date(scheduledTime).toISOString().split('T')[0];
+    // Use IST date for scheduledDate so early-morning doses (1:30 AM IST = prev-day UTC) are stored correctly
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const scheduledDate = new Date(new Date(scheduledTime).getTime() + IST_OFFSET_MS)
+      .toISOString()
+      .split('T')[0];
 
     // Find the existing log first (to check previous status)
     const existingLog = await DoseLog.findOne({

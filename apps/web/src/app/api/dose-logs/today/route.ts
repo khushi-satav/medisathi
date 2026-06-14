@@ -63,6 +63,9 @@ export async function GET(req: NextRequest) {
         } else if (isToday && scheduledTime < nowUTC) {
           // Past scheduled time today without a log → overdue
           status = 'overdue';
+        } else if (!isToday && scheduledTime < nowUTC) {
+          // Past date, no log → count as missed
+          status = 'missed';
         } else {
           status = 'upcoming';
         }
@@ -92,14 +95,15 @@ export async function GET(req: NextRequest) {
     // ── Stats Calculation ──────────────────────────────────────────────────────
     const total = schedule.length;
     const taken = schedule.filter(s => s.status === 'taken').length;
-    // Only count missed + overdue (past-due doses), NOT upcoming ones, as "missed"
+    const skipped = schedule.filter(s => s.status === 'skipped').length;
+    // Only count missed + overdue (past-due doses), NOT upcoming/snoozed
     const missed = schedule.filter(s => s.status === 'missed' || s.status === 'overdue').length;
 
-    // Adherence = taken / (doses that have already passed their scheduled time)
-    // For today: past doses = taken + missed + skipped + snoozed (NOT upcoming)
-    // For past dates: all doses count
-    const pastDoses = schedule.filter(s => !['upcoming'].includes(s.status)).length;
-    const adherencePct = pastDoses > 0 ? Math.round((taken / pastDoses) * 100) : 100;
+    // Adherence = taken / (doses that are definitively resolved: taken, missed, skipped)
+    // Snoozed = still pending, Upcoming = not yet due → both excluded
+    // Default 0 (not 100!) when no doses are past due yet today
+    const pastDoses = taken + missed + skipped; // only definitively-done doses
+    const adherencePct = pastDoses > 0 ? Math.round((taken / pastDoses) * 100) : 0;
 
     return NextResponse.json({
       schedule,
