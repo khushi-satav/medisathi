@@ -325,7 +325,7 @@ export default function PatientDashboard() {
   const taken    = schedule.filter((d: any) => d.status === 'taken').length;
 
   return (
-    <div className="space-y-6 md:space-y-8 max-w-[1400px] mx-auto w-full">
+    <div className="space-y-4 md:space-y-8 max-w-[1400px] mx-auto w-full">
       {/* ─── Header Hero ───────────────────────────────────────────────────────── */}
       <motion.div variants={itemVariants} className="relative overflow-hidden rounded-[2rem] gradient-primary shadow-elevated">
         <div className="absolute inset-0">
@@ -333,7 +333,7 @@ export default function PatientDashboard() {
           <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-gradient-to-tr from-secondary/40 to-transparent rounded-full blur-[60px] translate-y-1/3 -translate-x-1/4 mix-blend-screen" />
         </div>
         
-        <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div className="relative p-5 md:p-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 md:gap-6">
           <div className="z-10">
             <motion.p 
               initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}
@@ -349,7 +349,7 @@ export default function PatientDashboard() {
               ) : schedule.length === 0 ? (
                 <Link href="/medications" className="block cursor-pointer group">
                   <p className="text-white/80 text-sm font-medium mb-1">Get started</p>
-                  <h2 className="text-white text-3xl md:text-4xl font-extrabold tracking-tight flex items-center">
+                  <h2 className="text-white text-2xl md:text-4xl font-extrabold tracking-tight flex items-center">
                     Add your first medication <ChevronRight size={28} className="ml-2 transition-transform group-hover:translate-x-1" />
                   </h2>
                   <p className="text-white/70 text-sm mt-2">Tap here to set up your schedule</p>
@@ -357,8 +357,8 @@ export default function PatientDashboard() {
               ) : (
                 <div>
                   <p className="text-white/80 text-sm font-medium mb-1">Today&apos;s progress</p>
-                  <h2 className="text-white text-3xl md:text-4xl font-extrabold tracking-tight">
-                    {taken} <span className="text-white/60 text-2xl font-semibold">/ {todayStats.total} doses taken</span>
+                  <h2 className="text-white text-2xl md:text-4xl font-extrabold tracking-tight">
+                    {taken} <span className="text-white/60 text-lg md:text-2xl font-semibold">/ {todayStats.total} doses taken</span>
                   </h2>
                   {upcoming.length > 0 ? (
                     <div className="mt-4 flex items-center bg-white/10 backdrop-blur-md rounded-2xl px-4 py-2 w-fit border border-white/20">
@@ -378,46 +378,46 @@ export default function PatientDashboard() {
             </div>
           </div>
           
-          <div className="hidden sm:block z-10 shrink-0">
+          <div className="hidden xs:block z-10 shrink-0 self-end md:self-center">
             <AdherenceRing pct={todayStats.adherencePct ?? 0} />
           </div>
         </div>
       </motion.div>
 
       {/* ─── Stat cards ───────────────────────────────────────────────────── */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {[
           { label: "Today's Doses", value: `${taken}/${todayStats.total}`, icon: <Pill size={22} />, color: 'bg-primary/10 text-primary', border: 'border-primary/20' },
           { label: 'Taken Today',   value: taken, icon: <CheckCircle2 size={22} />, color: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' },
           { label: 'Missed Today',  value: todayStats.missed, icon: <AlertCircle size={22} />, color: 'bg-red-100 text-red-700', border: 'border-red-200' },
           { label: '7-Day Streak',  value: `${streak}d 🔥`, icon: <Flame size={22} />, color: 'bg-orange-100 text-orange-700', border: 'border-orange-200' },
         ].map((s, i) => (
-          <div key={i} className={`bg-card rounded-2xl shadow-sm border border-border p-4 flex items-center space-x-4 border-b-4 hover:border-b-[4px] ${s.border} transition-all`}>
-            <div className={`p-3.5 rounded-2xl ${s.color}`}>{s.icon}</div>
-            <div>
-              <p className="text-muted text-xs font-bold uppercase tracking-wider">{s.label}</p>
-              <p className="text-2xl font-bold text-foreground mt-0.5">{s.value}</p>
+          <div key={i} className={`bg-card rounded-2xl shadow-sm border border-border p-3 md:p-4 flex items-center space-x-3 md:space-x-4 border-b-4 ${s.border} transition-all`}>
+            <div className={`p-2.5 md:p-3.5 rounded-xl md:rounded-2xl shrink-0 ${s.color}`}>{s.icon}</div>
+            <div className="min-w-0">
+              <p className="text-muted text-[10px] md:text-xs font-bold uppercase tracking-wider truncate">{s.label}</p>
+              <p className="text-xl md:text-2xl font-bold text-foreground mt-0.5">{s.value}</p>
             </div>
           </div>
         ))}
       </motion.div>
 
       {/* ─── Body ─────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 md:gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-8">
         
         {/* Today's schedule */}
-        <motion.div variants={itemVariants} className="xl:col-span-2 bg-card rounded-3xl shadow-card border border-border overflow-hidden flex flex-col h-fit">
-          <div className="p-6 md:p-8 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <motion.div variants={itemVariants} className="xl:col-span-2 bg-card rounded-2xl md:rounded-3xl shadow-card border border-border overflow-hidden flex flex-col h-fit">
+          <div className="p-4 md:p-8 border-b border-border flex flex-row items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-foreground">Today&apos;s Schedule</h2>
-              <p className="text-sm text-muted mt-1">Stay on top of your regimen</p>
+              <h2 className="text-lg md:text-2xl font-bold text-foreground">Today&apos;s Schedule</h2>
+              <p className="text-xs md:text-sm text-muted mt-0.5 md:mt-1">Stay on top of your regimen</p>
             </div>
             <Link href="/dose-tracker" className="text-sm text-primary font-bold hover:text-primary-dark transition-colors flex items-center bg-secondary/20 px-4 py-2 rounded-2xl">
               Full tracker <ChevronRight size={16} className="ml-1" />
             </Link>
           </div>
 
-          <div className="p-6 md:p-8 flex-1 bg-background/50">
+          <div className="p-3 md:p-8 flex-1 bg-background/50">
             {schedLoading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
@@ -444,9 +444,9 @@ export default function PatientDashboard() {
                       <motion.div 
                         key={uniqueDoseId}
                         initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                        className={`group flex flex-col sm:flex-row sm:items-center justify-between p-5 rounded-2xl border transition-all hover:shadow-md ${STATUS_COLORS[dose.status] || 'bg-card border-border hover:border-primary/30'}`}
+                        className={`group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 md:p-5 rounded-2xl border transition-all hover:shadow-md ${STATUS_COLORS[dose.status] || 'bg-card border-border hover:border-primary/30'}`}
                       >
-                      <div className="flex items-start sm:items-center space-x-4 mb-4 sm:mb-0">
+                      <div className="flex items-start sm:items-center space-x-3 mb-3 sm:mb-0">
                         <div className={`mt-1 sm:mt-0 w-3.5 h-3.5 rounded-full shrink-0 ${DOT_COLORS[dose.status] || 'bg-muted'}`} />
                         <div>
                           <p className="font-bold text-foreground text-lg">{dose.medicationName || dose.name}</p>
@@ -463,7 +463,7 @@ export default function PatientDashboard() {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-3 pl-7 sm:pl-0">
+                      <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto space-x-2 pl-6 sm:pl-0">
                         <span className={`text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider ${PILL_COLORS[dose.status] || 'bg-border text-muted'}`}>
                           {dose.status}
                         </span>
@@ -471,7 +471,7 @@ export default function PatientDashboard() {
                           <button
                             onClick={() => logDose.mutate({ medicationId: dose.medicationId, status: 'taken', scheduledTime: dose.scheduledTime })}
                             disabled={logDose.isPending}
-                            className="bg-primary hover:bg-primary-dark text-white shadow-warm hover:shadow-elevated text-sm font-bold py-2.5 px-6 rounded-xl transition-all active:scale-95 disabled:opacity-50"
+                            className="bg-primary hover:bg-primary-dark text-white shadow-warm text-sm font-bold py-2 px-4 md:py-2.5 md:px-6 rounded-xl transition-all active:scale-95 disabled:opacity-50"
                           >
                             Take Now
                           </button>

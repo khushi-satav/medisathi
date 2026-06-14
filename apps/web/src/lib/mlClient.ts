@@ -43,7 +43,10 @@ export async function predictAdherenceRisk(
   try {
     const res = await fetch(`${ML_API_URL}/api/v1/predict/adherence-risk`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-API-Secret': process.env.ML_API_SECRET || ''
+      },
       body: JSON.stringify(input),
       signal: AbortSignal.timeout(5000), // 5s timeout
     });
@@ -74,7 +77,10 @@ export async function logDoseToML(data: {
   try {
     await fetch(`${ML_API_URL}/log-dose`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-API-Secret': process.env.ML_API_SECRET || ''
+      },
       body: JSON.stringify(data),
       signal: AbortSignal.timeout(3000),
     });
@@ -106,6 +112,9 @@ export async function scanPrescription(
 
     const res = await fetch(`${ML_API_URL}/scan-prescription`, {
       method: 'POST',
+      headers: {
+        'X-API-Secret': process.env.ML_API_SECRET || ''
+      },
       body: formData,
       signal: AbortSignal.timeout(30000), // 30s timeout for OCR
     });

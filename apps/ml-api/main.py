@@ -252,8 +252,17 @@ async def retrain_model(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
+@app.get("/api/v1/health")
 async def health():
     return {"status": "ok", "model_ready": adherence_model is not None}
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to the MediSaathi ML API",
+        "status": "ok",
+        "docs_url": "/docs"
+    }
 
 @app.post("/scan-prescription")
 async def scan_prescription(
