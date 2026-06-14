@@ -64,14 +64,14 @@ export async function GET(req: NextRequest) {
 
     schedule.sort((a, b) => a.time.localeCompare(b.time));
 
-    // Summary stats
-    const pastOrTakenSchedule = schedule.filter(s => s.status !== 'upcoming' && s.status !== 'pending');
+    // Summary stats — count ALL doses for today (including upcoming)
+    const total = schedule.length;
     const taken = schedule.filter(s => s.status === 'taken').length;
     const missed = schedule.filter(s => s.status === 'missed' || s.status === 'overdue').length;
-    const total = pastOrTakenSchedule.length;
-    const adherenceRate = total > 0 ? Math.round((taken / total) * 100) : 100;
+    const pastDone = schedule.filter(s => !['upcoming', 'pending'].includes(s.status)).length;
+    const adherencePct = pastDone > 0 ? Math.round((taken / pastDone) * 100) : 100;
 
-    return NextResponse.json({ schedule, date, stats: { taken, missed, total, adherenceRate } });
+    return NextResponse.json({ schedule, date, stats: { taken, missed, total, adherencePct } });
   } catch (error: any) {
     if (error.message === 'UNAUTHORIZED') return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
     return NextResponse.json({ error: error.message }, { status: 500 });
