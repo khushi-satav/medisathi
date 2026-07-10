@@ -17,6 +17,8 @@ export interface IMedication extends Document {
   stockCount: number;
   stockUpdatedAt: Date;
   refillAlertDays: number;
+  daysSupply: number;
+  refillThreshold: number;
   prescriptionId?: mongoose.Types.ObjectId;
   addedByOCR: boolean;
   fdaVerified: boolean;
@@ -52,6 +54,8 @@ const MedicationSchema = new Schema<IMedication>({
   stockCount: { type: Number, default: 30 },
   stockUpdatedAt: { type: Date, default: Date.now },
   refillAlertDays: { type: Number, default: 7 },
+  daysSupply: { type: Number, default: 30 },
+  refillThreshold: { type: Number, default: 7 },
   prescriptionId: { type: Schema.Types.ObjectId, ref: 'Prescription' },
   addedByOCR: { type: Boolean, default: false },
   fdaVerified: { type: Boolean, default: false },

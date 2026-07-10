@@ -130,6 +130,7 @@ def extract_frequency(text):
         "100": "1-0-0",
         "010": "0-1-0",
         "001": "0-0-1",
+        "000": "0-0-0",
     }
 
     for wrong, correct in replacements.items():
@@ -145,6 +146,7 @@ def extract_frequency(text):
         "1-0-0",
         "0-1-0",
         "0-0-1",
+        "0-0-0",
     ]
 
     for pattern in patterns:

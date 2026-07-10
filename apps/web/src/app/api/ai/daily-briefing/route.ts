@@ -17,39 +17,56 @@ export async function POST(req: NextRequest) {
     }
 
     const todayStr = new Date().toISOString().split('T')[0];
-    const stats = await AdherenceStats.findOne({ userId: user._id, date: todayStr });
-
+    
+    // 1. Calculate Today's Doses taken vs total
     const todayDoses = await DoseLog.find({
       userId: user._id,
       scheduledDate: todayStr,
-    }).populate('medicationId', 'name dosage');
+    });
+    const dosesTotal = todayDoses.length;
+    const dosesTaken = todayDoses.filter(d => d.status === 'taken').length;
 
+    // 2. Calculate Missed Doses in last 7 days
     const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const recentMissed = await DoseLog.find({
       userId: user._id,
       status: 'missed',
       scheduledTime: { $gte: last7Days },
-    }).populate('medicationId', 'name');
+    });
+    const missedCount = recentMissed.length;
 
-    const dosesSummary = todayDoses.map(d => ({
-      medication: (d.medicationId as any)?.name || 'Unknown',
-      time: d.scheduledTime,
-      status: d.status,
-    }));
-
-    // --- MODIFICATION: Fetch Risk Level for Briefing ---
-    let riskInfo = "Risk: Low";
-    try {
-      const riskRes = await fetch(`${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/api/ai/predict`, {
-        headers: { 'Cookie': req.headers.get('cookie') || '' } // Pass cookies for auth if needed
-      });
-      if (riskRes.ok) {
-        const riskData = await riskRes.json();
-        riskInfo = `Risk: ${riskData.riskLevel}. Recommendation: ${riskData.recommendation}`;
+    // 3. Calculate Current Streak
+    const statsAll = await AdherenceStats.find({ userId: user._id }).sort({ date: -1 });
+    let streakDays = 0;
+    for (const stat of statsAll) {
+      if (stat.adherenceRate >= 80) {
+        streakDays++;
+      } else {
+        break;
       }
-    } catch (err) {
-      console.error('Risk fetch for briefing failed:', err);
     }
+
+    // 4. Calculate Upcoming Refill Alerts
+    const Medication = (await import('@/models/Medication')).default;
+    const activeMeds = await Medication.find({ userId: user._id, isActive: true });
+    const refillAlertsList: string[] = [];
+    for (const med of activeMeds) {
+      const dailyDosesCount = med.times.length || 1;
+      const daysRemaining = Math.floor((med.stockCount || 0) / dailyDosesCount);
+      if (daysRemaining <= (med.refillAlertDays || 7)) {
+        refillAlertsList.push(`${med.name} (${daysRemaining} days remaining)`);
+      }
+    }
+    const refillAlerts = refillAlertsList.length > 0 ? refillAlertsList.join(', ') : 'None';
+
+    // 5. Gather Drug Interaction Warnings
+    const allInteractions = activeMeds.reduce((acc: string[], med) => {
+      if (med.interactions && med.interactions.length > 0) {
+        acc.push(...med.interactions);
+      }
+      return acc;
+    }, []);
+    const interactionWarnings = allInteractions.length > 0 ? allInteractions.join(', ') : 'None';
 
     const languageNames: Record<string, string> = {
       en: 'English',
@@ -61,16 +78,22 @@ export async function POST(req: NextRequest) {
     };
     const targetLang = languageNames[user.language as string] || 'English';
 
-    const prompt = `Generate a brief, encouraging daily medication briefing for this patient:
-- Name: ${user.name}
-- Today's doses: ${JSON.stringify(dosesSummary)}
-- Today's adherence: ${stats?.adherenceRate ?? 'N/A'}%
-- Missed doses in last 7 days: ${recentMissed.length}
-- ML Health Prediction: ${riskInfo}
+    const prompt = `
+Generate a 2-3 sentence daily medication briefing for the patient ${user.name}.
+Data: 
+- Doses today: ${dosesTaken}/${dosesTotal}
+- Missed in last 7 days: ${missedCount}
+- Current streak: ${streakDays} days
+- Upcoming refill needed: ${refillAlerts}
+- Any new drug interaction flags: ${interactionWarnings}
 
-Keep it under 80 words. Use simple, warm language. 
-If adherence is low or risk is HIGH, be motivating but firm about safety.
-Include: what to take next, timing reminder, one encouragement line.
+Only mention things that are actually true from this data. If nothing notable happened, say so briefly — don't pad with generic praise.
+Turn it from a summary into a nudge:
+- If a medication is running low, warn them (e.g. "Your Metformin supply runs out in X days").
+- If there are drug interactions, alert them (e.g. "You added Aspirin yesterday — this may interact with your existing Warfarin. Ask your doctor").
+- If they miss doses regularly on certain days, nudge them.
+- If everything is perfect, keep it extremely brief and encouraging.
+
 IMPORTANT: You MUST write the entire response in ${targetLang}. All text, greetings, and labels must be written in the ${targetLang} language and its native script (e.g. Devanagari script for Hindi/Marathi, Tamil script for Tamil, etc.). Do not write in transliterated/romanized format, write in the native script.`;
 
     const briefing = await generateText(prompt);

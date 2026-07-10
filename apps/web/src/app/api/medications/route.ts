@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Medication from '@/models/Medication';
+import DoseLog from '@/models/DoseLog';
 import { requireAuth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -16,13 +17,23 @@ export async function GET(req: NextRequest) {
 
     const medications = await Medication.find(query).sort({ createdAt: -1 });
 
-    const medsWithStock = medications.map(med => {
+    const medsWithStock = await Promise.all(medications.map(async (med) => {
       const obj = med.toObject();
-      const daysRemaining = med.times.length > 0
-        ? Math.floor(med.stockCount / med.times.length)
-        : 0;
-      return { ...obj, daysRemaining };
-    });
+      const dosesPerDay = med.times.length || 1;
+      const dosesLoggedTaken = await DoseLog.countDocuments({ medicationId: med._id, status: 'taken' });
+      
+      const daysSupply = med.daysSupply !== undefined ? med.daysSupply : (med.stockCount ?? 30);
+      const refillThreshold = med.refillThreshold !== undefined ? med.refillThreshold : (med.refillAlertDays ?? 7);
+      
+      const daysRemaining = Math.max(0, Math.floor(daysSupply - (dosesLoggedTaken / dosesPerDay)));
+      
+      return { 
+        ...obj, 
+        daysSupply,
+        refillThreshold,
+        daysRemaining 
+      };
+    }));
 
     return NextResponse.json({ medications: medsWithStock });
   } catch (error: any) {
@@ -41,6 +52,7 @@ export async function POST(req: NextRequest) {
       name, dosage, form, times, foodInstruction,
       startDate, endDate, stockCount, refillAlertDays, condition,
       color, isOngoing, specialInstructions, genericName,
+      daysSupply, refillThreshold,
     } = body;
 
     if (!name || !dosage || !startDate) {
@@ -69,6 +81,9 @@ export async function POST(req: NextRequest) {
       const additionalStock = Number(stockCount) ?? 30;
       existingMed.stockCount = Math.max(0, existingMed.stockCount || 0) + additionalStock;
       
+      // Also update daysSupply with new additional stock
+      existingMed.daysSupply = Math.max(0, existingMed.daysSupply || 0) + (daysSupply !== undefined ? Number(daysSupply) : additionalStock);
+      
       // Update fields with manually input values
       existingMed.dosage = dosage;
       existingMed.form = form || 'tablet';
@@ -77,6 +92,8 @@ export async function POST(req: NextRequest) {
       existingMed.endDate = endDate ? new Date(endDate) : undefined;
       existingMed.isOngoing = isOngoing !== false;
       if (refillAlertDays !== undefined) existingMed.refillAlertDays = refillAlertDays;
+      if (refillThreshold !== undefined) existingMed.refillThreshold = refillThreshold;
+      else if (refillAlertDays !== undefined) existingMed.refillThreshold = refillAlertDays;
       
       if (genericName !== undefined) existingMed.genericName = genericName;
       if (condition !== undefined) existingMed.condition = condition;
@@ -100,6 +117,8 @@ export async function POST(req: NextRequest) {
         endDate: endDate ? new Date(endDate) : undefined,
         stockCount: stockCount ?? 30,
         refillAlertDays: refillAlertDays ?? 7,
+        daysSupply: daysSupply ?? stockCount ?? 30,
+        refillThreshold: refillThreshold ?? refillAlertDays ?? 7,
         condition,
         color: color || '#6C63FF',
         isOngoing: isOngoing !== false,

@@ -12,12 +12,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import twilio from 'twilio';
 import { requireAuth } from '@/lib/auth';
 import connectDB from '@/lib/mongoose';
 import User from '@/models/User';
 import CaregiverInvite from '@/models/CaregiverInvite';
 import { sendEmail, caregiverInviteEmailHtml } from '@/lib/email';
+import { sendSMS } from '@/lib/notificationHelper';
+import { getSmsTemplates } from '@/lib/smsTemplates';
 
 /* ── POST — send invite ─────────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
@@ -105,16 +106,13 @@ export async function POST(req: NextRequest) {
       }),
     });
 
-    if (phone && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-      try {
-        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        await twilioClient.messages.create({
-          body: `${patient.name} invited you to monitor their medicines on MediSaathi. Accept here: ${acceptUrl}`,
-          to: phone,
-          from: process.env.TWILIO_PHONE_NUMBER
-        });
-      } catch (smsError) {
-        console.error('Failed to send SMS invite:', smsError);
+    if (phone) {
+      // Use central sendSMS for phone validation + audit logging
+      const t = getSmsTemplates(patient.language);
+      const smsResult = await sendSMS(phone, t.caregiverInvite(patient.name, acceptUrl));
+      if (!smsResult.success) {
+        console.error(`Caregiver invite SMS failed to ${phone}: ${smsResult.error}`);
+        // Non-fatal: email was already sent; log and continue
       }
     }
 

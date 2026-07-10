@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
+import { useLanguage } from '@/contexts/LanguageContext';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import {
@@ -13,43 +13,43 @@ import {
 
 interface NavItem {
   href: string;
-  label: string;
+  labelKey: string;
   icon: React.ElementType;
   badge?: number | string;
 }
 
 const patientNavItems: NavItem[] = [
-  { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
-  { href: '/medications',     label: 'Medications',       icon: Pill },
-  { href: '/dose-tracker',    label: 'Tracker',           icon: Calendar },
-  { href: '/scan-rx',         label: 'Scan Prescription', icon: ScanLine },
-  { href: '/insights',        label: 'AI Insights',       icon: LineChart },
-  { href: '/settings',        label: 'Settings',          icon: Settings },
+  { href: '/dashboard',    labelKey: 'sidebar.dashboard',   icon: LayoutDashboard },
+  { href: '/medications',  labelKey: 'sidebar.medications', icon: Pill },
+  { href: '/dose-tracker', labelKey: 'sidebar.doseTracker', icon: Calendar },
+  { href: '/scan-rx',      labelKey: 'sidebar.scanRx',      icon: ScanLine },
+  { href: '/insights',     labelKey: 'sidebar.insights',    icon: LineChart },
+  { href: '/settings',     labelKey: 'sidebar.settings',    icon: Settings },
 ];
 
 const caregiverNavItems: NavItem[] = [
-  { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
-  { href: '/caregiver',       label: 'My Patients',       icon: Users },
-  { href: '/settings',        label: 'Settings',          icon: Settings },
+  { href: '/dashboard',  labelKey: 'sidebar.dashboard', icon: LayoutDashboard },
+  { href: '/caregiver',  labelKey: 'sidebar.caregiver', icon: Users },
+  { href: '/settings',   labelKey: 'sidebar.settings',  icon: Settings },
 ];
 
 const doctorNavItems: NavItem[] = [
-  { href: '/dashboard',       label: 'Dashboard',         icon: LayoutDashboard },
-  { href: '/doctor',          label: 'My Patients',       icon: Users },
-  { href: '/settings',        label: 'Settings',          icon: Settings },
+  { href: '/dashboard', labelKey: 'sidebar.dashboard', icon: LayoutDashboard },
+  { href: '/doctor',    labelKey: 'sidebar.caregiver', icon: Users },
+  { href: '/settings',  labelKey: 'sidebar.settings',  icon: Settings },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const { t } = useLanguage();
 
   const navItems = user?.role === 'caregiver'
     ? caregiverNavItems
     : user?.role === 'doctor'
     ? doctorNavItems
     : patientNavItems;
-
 
   const handleLogout = () => {
     logout();
@@ -71,7 +71,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-4 py-2 space-y-2 overflow-y-auto">
-        {navItems.map(({ href, label, icon: Icon, badge }) => {
+        {navItems.map(({ href, labelKey, icon: Icon, badge }) => {
           const currentPath = pathname ?? '';
           const active = currentPath === href || (href !== '/dashboard' && currentPath.startsWith(href));
           return (
@@ -89,7 +89,7 @@ export default function Sidebar() {
                   <div className={`p-2 rounded-xl transition-colors duration-300 ${active ? 'bg-card shadow-sm text-primary' : 'bg-transparent text-muted group-hover:bg-card group-hover:shadow-sm group-hover:text-primary'}`}>
                     <Icon size={18} strokeWidth={active ? 2.5 : 2} />
                   </div>
-                  <span className={`text-sm ${active ? 'font-semibold' : 'font-medium'}`}>{label}</span>
+                  <span className={`text-sm ${active ? 'font-semibold' : 'font-medium'}`}>{t(labelKey)}</span>
                 </div>
                 {badge && (
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-danger text-[10px] font-bold text-white shadow-sm shadow-danger/30">
@@ -125,7 +125,7 @@ export default function Sidebar() {
           <div className="p-2 rounded-xl bg-transparent transition-colors">
             <LogOut size={18} />
           </div>
-          <span>Sign Out</span>
+          <span>{t('sidebar.logout')}</span>
         </button>
       </div>
     </aside>

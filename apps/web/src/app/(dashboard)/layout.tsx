@@ -21,6 +21,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [isAuthenticated, router]);
 
+  useEffect(() => {
+    const handleOpen = () => setChatOpen(true);
+    window.addEventListener('open-ai-chat', handleOpen);
+    return () => window.removeEventListener('open-ai-chat', handleOpen);
+  }, []);
+
   if (!isAuthenticated) return null;
 
   return (

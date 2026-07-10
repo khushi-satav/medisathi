@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
 import api, { authService, doctorService } from '@/services/api';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '@/lib/i18n';
 import {
   Bell,
   Shield,
@@ -139,6 +141,7 @@ const NotificationToggle = ({
 
 export default function SettingsPage() {
   const { user, updateUser } = useAuthStore();
+  const { lang, setLang } = useLanguage();
   const [tab, setTab] = useState<Tab>('notifications');
   const [profile, setProfile] = useState({
     name: user?.name || '',
@@ -266,6 +269,20 @@ export default function SettingsPage() {
     onError: () => toast.error('Failed to update profile'),
   });
 
+  const saveLanguageMutation = useMutation({
+    mutationFn: (language: string) => authService.updateMe({ language }),
+    onSuccess: (res) => {
+      updateUser(res.data.user);
+      toast.success('Language updated!');
+    },
+    onError: () => toast.error('Failed to update language'),
+  });
+
+  const handleLanguageChange = (newLang: SupportedLanguage) => {
+    setLang(newLang);
+    saveLanguageMutation.mutate(newLang);
+  };
+
   const saveSosMutation = useMutation({
     mutationFn: (data: any) => authService.updateMe(data),
     onSuccess: (res) => {
@@ -330,6 +347,33 @@ export default function SettingsPage() {
       <div>
         <h1 className="page-title">Settings</h1>
         <p className="body-text mt-1">Manage your account, devices, and sharing preferences</p>
+      </div>
+
+      {/* Language Selector */}
+      <div className="card p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-lg">🌐</div>
+          <div>
+            <h3 className="font-bold text-slate-800 text-sm">Preferred Language</h3>
+            <p className="text-xs text-slate-500">UI, reminders, and AI responses will use this language</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {SUPPORTED_LANGUAGES.map((l) => (
+            <button
+              key={l.code}
+              onClick={() => handleLanguageChange(l.code)}
+              className={`flex flex-col items-start px-4 py-3 rounded-xl border text-sm font-medium transition-all ${
+                lang === l.code
+                  ? 'bg-primary text-white border-primary shadow-sm'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-primary/40 hover:bg-primary/5'
+              }`}
+            >
+              <span className="font-bold">{l.nativeLabel}</span>
+              <span className={`text-[11px] ${lang === l.code ? 'text-white/80' : 'text-slate-400'}`}>{l.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tabs */}

@@ -31,6 +31,10 @@ async function connectDB() {
     const opts = {
       bufferCommands: false,
       dbName: 'medisaathi',
+      maxPoolSize: 10,           // allow up to 10 concurrent connections
+      minPoolSize: 2,            // keep 2 warm connections ready
+      serverSelectionTimeoutMS: 5000, // fail fast if DB unreachable
+      socketTimeoutMS: 45000,    // close idle sockets after 45s
     };
 
     cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {

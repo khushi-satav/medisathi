@@ -3,6 +3,7 @@ import * as admin from 'firebase-admin';
 import twilio from 'twilio';
 import Notification, { NotificationType } from '@/models/Notification';
 import User from '@/models/User';
+import SimulationLog from '@/models/SimulationLog';
 
 // Initialize Firebase Admin SDK if credentials are provided
 let isFirebaseInitialized = false;
@@ -33,14 +34,32 @@ try {
 }
 
 // Initialize Twilio Client
+// All three vars must be present for real SMS/call delivery.
+// If any are missing, sendSMS/makePhoneCall will simulate and log clearly.
 let twilioClient: any = null;
-if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN  = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER;
+
+const missingTwilioVars: string[] = [];
+if (!TWILIO_ACCOUNT_SID) missingTwilioVars.push('TWILIO_ACCOUNT_SID');
+if (!TWILIO_AUTH_TOKEN)  missingTwilioVars.push('TWILIO_AUTH_TOKEN');
+if (!TWILIO_PHONE_NUMBER) missingTwilioVars.push('TWILIO_PHONE_NUMBER');
+
+if (missingTwilioVars.length > 0) {
+  console.warn(
+    `[MediSaathi] ⚠️  Twilio not configured — missing: ${missingTwilioVars.join(', ')}. ` +
+    `SMS and voice calls will be SIMULATED. Add these to .env.local to enable real delivery.`
+  );
+} else {
   try {
-    twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    twilioClient = twilio(TWILIO_ACCOUNT_SID!, TWILIO_AUTH_TOKEN!);
+    console.log(`[MediSaathi] ✅ Twilio initialized. Sending from ${TWILIO_PHONE_NUMBER}`);
   } catch (err) {
-    console.error('Failed to initialize Twilio client:', err);
+    console.error('[MediSaathi] Failed to initialize Twilio client:', err);
   }
 }
+
 
 export async function sendPushNotification(
   userId: string,
@@ -97,6 +116,22 @@ export async function sendPushNotification(
       console.log(`User ${userId} does not have an FCM token. FCM push bypassed.`);
     }
 
+    // Log simulation
+    try {
+      await SimulationLog.create({
+        type: 'push',
+        recipientName: user?.name || 'Unknown Patient',
+        recipientRole: user?.role || 'patient',
+        recipientPhone: user?.phone,
+        message: `${title}: ${body}`,
+        status: (user?.fcmToken && isFirebaseInitialized) ? 'success' : 'simulated',
+        timestamp: new Date(),
+        metadata: { ...metadata, fcmToken: user?.fcmToken }
+      });
+    } catch (simErr) {
+      console.error('Failed to log push simulation:', simErr);
+    }
+
     return notif;
   } catch (error) {
     console.error(`Error sending push notification to user ${userId}:`, error);
@@ -104,55 +139,126 @@ export async function sendPushNotification(
   }
 }
 
-export async function sendSMS(toPhone: string, body: string) {
+export async function sendSMS(toPhone: string, body: string): Promise<{ success: boolean; sid?: string; simulated?: boolean; error?: string }> {
   if (!toPhone) {
-    console.log('No phone number provided for SMS. Bypassing.');
-    return { success: false, reason: 'No phone number' };
+    console.log('sendSMS: No phone number provided. Skipping.');
+    return { success: false, error: 'No phone number provided' };
   }
+  if (!body) {
+    return { success: false, error: 'No message body provided' };
+  }
+
+  // ── E.164 phone validation ───────────────────────────────────────────────
+  const { isValidPhoneNumber } = await import('libphonenumber-js');
+  if (!isValidPhoneNumber(toPhone)) {
+    console.warn(`sendSMS: Invalid phone number format: "${toPhone}". Must be E.164 (e.g. +919876543210).`);
+    return { success: false, error: `Invalid phone number format: "${toPhone}". Use E.164 format, e.g. +919876543210.` };
+  }
+
+  let logStatus: 'success' | 'simulated' | 'failed' = 'simulated';
+  let twilioSid = '';
+  let errMessage = '';
 
   if (twilioClient) {
     try {
       const message = await twilioClient.messages.create({
         body,
         to: toPhone,
-        from: process.env.TWILIO_PHONE_NUMBER || '+1234567890',
+        from: process.env.TWILIO_PHONE_NUMBER || '',
       });
       console.log(`SMS sent successfully to ${toPhone}. SID: ${message.sid}`);
-      return { success: true, sid: message.sid };
+      logStatus = 'success';
+      twilioSid = message.sid;
     } catch (err: any) {
-      console.error(`Failed to send SMS via Twilio to ${toPhone}:`, err.message);
-      // Fallback/Simulate so tests and cron don't fail completely
-      console.log(`[SIMULATED SMS FALLBACK] To: ${toPhone}, Body: ${body}`);
-      return { success: false, error: err.message };
+      // Surface Twilio error codes for debugging (trial, DLT block, unverified number, etc.)
+      console.error(`Twilio SMS failed to ${toPhone}: [${err.code}] ${err.message}`);
+      logStatus = 'failed';
+      errMessage = `[Twilio ${err.code ?? 'error'}] ${err.message}`;
     }
   } else {
-    console.log(`[SIMULATED SMS] To: ${toPhone}, Body: ${body}`);
-    return { success: true, simulated: true };
+    // Credentials not configured — log clearly but do NOT return success=true
+    console.warn(`[SIMULATED SMS — no Twilio credentials] To: ${toPhone}, Body: ${body}`);
+    logStatus = 'simulated';
   }
+
+  // ── Persist to MongoDB for audit trail ──────────────────────────────────
+  try {
+    const user = await User.findOne({ phone: toPhone });
+    await SimulationLog.create({
+      type: 'sms',
+      recipientName: user?.name || 'Unknown',
+      recipientPhone: toPhone,
+      recipientRole: user?.role || 'patient',
+      message: body,
+      status: logStatus,
+      timestamp: new Date(),
+      metadata: twilioSid ? { twilioSid } : (errMessage ? { error: errMessage } : undefined),
+    });
+  } catch (simErr) {
+    console.error('Failed to write SMS audit log:', simErr);
+  }
+
+  if (logStatus === 'success') return { success: true, sid: twilioSid };
+  if (logStatus === 'simulated') return { success: true, simulated: true };
+  return { success: false, error: errMessage };
 }
 
-export async function makePhoneCall(toPhone: string, textMessage: string) {
+export async function makePhoneCall(toPhone: string, textMessage: string): Promise<{ success: boolean; sid?: string; simulated?: boolean; error?: string }> {
   if (!toPhone) {
-    console.log('No phone number provided for Phone Call. Bypassing.');
-    return { success: false, reason: 'No phone number' };
+    console.log('makePhoneCall: No phone number provided. Skipping.');
+    return { success: false, error: 'No phone number provided' };
   }
+
+  // ── E.164 phone validation ───────────────────────────────────────────────
+  const { isValidPhoneNumber } = await import('libphonenumber-js');
+  if (!isValidPhoneNumber(toPhone)) {
+    console.warn(`makePhoneCall: Invalid phone number format: "${toPhone}".`);
+    return { success: false, error: `Invalid phone number format: "${toPhone}". Use E.164 format, e.g. +919876543210.` };
+  }
+
+  let logStatus: 'success' | 'simulated' | 'failed' = 'simulated';
+  let twilioSid = '';
+  let errMessage = '';
 
   if (twilioClient) {
     try {
       const call = await twilioClient.calls.create({
         twiml: `<Response><Say voice="alice" loop="2">${textMessage}</Say></Response>`,
         to: toPhone,
-        from: process.env.TWILIO_PHONE_NUMBER || '+1234567890',
+        from: process.env.TWILIO_PHONE_NUMBER || '',
       });
       console.log(`Voice call initiated to ${toPhone}. SID: ${call.sid}`);
-      return { success: true, sid: call.sid };
+      logStatus = 'success';
+      twilioSid = call.sid;
     } catch (err: any) {
-      console.error(`Failed to initiate phone call via Twilio to ${toPhone}:`, err.message);
-      console.log(`[SIMULATED PHONE CALL FALLBACK] To: ${toPhone}, Message: ${textMessage}`);
-      return { success: false, error: err.message };
+      console.error(`Twilio call failed to ${toPhone}: [${err.code}] ${err.message}`);
+      logStatus = 'failed';
+      errMessage = `[Twilio ${err.code ?? 'error'}] ${err.message}`;
     }
   } else {
-    console.log(`[SIMULATED PHONE CALL] To: ${toPhone}, Message: ${textMessage}`);
-    return { success: true, simulated: true };
+    console.warn(`[SIMULATED CALL — no Twilio credentials] To: ${toPhone}, Message: ${textMessage}`);
+    logStatus = 'simulated';
   }
+
+  // ── Persist to MongoDB for audit trail ──────────────────────────────────
+  try {
+    const user = await User.findOne({ phone: toPhone });
+    await SimulationLog.create({
+      type: 'call',
+      recipientName: user?.name || 'Unknown',
+      recipientPhone: toPhone,
+      recipientRole: user?.role || 'patient',
+      message: textMessage,
+      status: logStatus,
+      timestamp: new Date(),
+      metadata: twilioSid ? { twilioSid } : (errMessage ? { error: errMessage } : undefined),
+    });
+  } catch (simErr) {
+    console.error('Failed to write call audit log:', simErr);
+  }
+
+  if (logStatus === 'success') return { success: true, sid: twilioSid };
+  if (logStatus === 'simulated') return { success: true, simulated: true };
+  return { success: false, error: errMessage };
 }
+

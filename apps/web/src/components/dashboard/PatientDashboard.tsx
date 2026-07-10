@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/authStore';
+import { useChatStore } from '@/store/chatStore';
 import { doseLogsService, insightsService, aiService, medicationsService, sosService } from '@/services/api';
-import { CheckCircle2, Clock, AlertCircle, Flame, Pill, ChevronRight, Activity, Sparkles, Play, Pause, RefreshCw, ShieldAlert, ShoppingBag } from 'lucide-react';
+import { CheckCircle2, Clock, AlertCircle, Flame, Pill, ChevronRight, Activity, Sparkles, Play, Pause, RefreshCw, ShieldAlert, ShoppingBag, Send } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
@@ -93,8 +94,10 @@ const itemVariants: Variants = {
 
 function AIBriefingCard() {
   const { user } = useAuthStore();
+  const { sendMessage } = useChatStore();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [followUp, setFollowUp] = useState('');
 
   const { data: briefing, isLoading, isError, refetch } = useQuery({
     queryKey: ['daily-briefing'],
@@ -157,6 +160,18 @@ function AIBriefingCard() {
     setIsPaused(false);
   };
 
+  const handleFollowUpSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!followUp.trim() || !briefing) return;
+
+    // Send the message with context
+    sendMessage(followUp.trim(), briefing);
+    setFollowUp('');
+
+    // Open conversational chat drawer
+    window.dispatchEvent(new CustomEvent('open-ai-chat'));
+  };
+
   const langNames: Record<string, string> = {
     en: 'English',
     hi: 'हिंदी (Hindi)',
@@ -179,7 +194,7 @@ function AIBriefingCard() {
           </div>
           <div>
             <h3 className="font-bold text-foreground text-lg tracking-tight">AI Daily Briefing</h3>
-            <p className="text-xs text-muted font-medium">{activeLang}</p>
+            <p className="text-xs text-muted font-medium">{activeLang} • Based on your last 7 days</p>
           </div>
         </div>
 
@@ -235,36 +250,58 @@ function AIBriefingCard() {
             {briefing}
           </div>
 
-          <div className="flex items-center space-x-3 pt-2">
-            <button
-              onClick={handlePlayPause}
-              className={`flex items-center space-x-2 text-sm font-bold px-4 py-2.5 rounded-xl transition-all duration-200 shadow-sm active:scale-[0.98] ${
-                isPlaying && !isPaused
-                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
-                  : 'bg-violet-600 hover:bg-violet-700 text-white'
-              }`}
-            >
-              {isPlaying && !isPaused ? (
-                <>
-                  <Pause size={15} fill="currentColor" />
-                  <span>Pause</span>
-                </>
-              ) : (
-                <>
-                  <Play size={15} fill="currentColor" />
-                  <span>Listen Briefing</span>
-                </>
-              )}
-            </button>
-
-            {isPlaying && (
+          <div className="flex items-center justify-between gap-4 pt-2">
+            <div className="flex items-center space-x-3">
               <button
-                onClick={handleStop}
-                className="text-xs font-bold text-slate-500 hover:text-red-500 px-3 py-2 rounded-xl hover:bg-red-500/5 transition-all border border-transparent hover:border-red-500/10"
+                onClick={handlePlayPause}
+                className={`flex items-center space-x-2 text-sm font-bold px-4 py-2.5 rounded-xl transition-all duration-200 shadow-sm active:scale-[0.98] ${
+                  isPlaying && !isPaused
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                    : 'bg-violet-600 hover:bg-violet-700 text-white'
+                }`}
               >
-                Stop
+                {isPlaying && !isPaused ? (
+                  <>
+                    <Pause size={15} fill="currentColor" />
+                    <span>Pause</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={15} fill="currentColor" />
+                    <span>Listen Briefing</span>
+                  </>
+                )}
               </button>
-            )}
+
+              {isPlaying && (
+                <button
+                  onClick={handleStop}
+                  className="text-xs font-bold text-slate-500 hover:text-red-500 px-3 py-2 rounded-xl hover:bg-red-500/5 transition-all border border-transparent hover:border-red-500/10"
+                >
+                  Stop
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Interactive conversational ask about this briefing */}
+          <div className="pt-2 border-t border-violet-100/40 dark:border-violet-900/20">
+            <form onSubmit={handleFollowUpSubmit} className="flex items-center gap-2 relative">
+              <input
+                type="text"
+                value={followUp}
+                onChange={(e) => setFollowUp(e.target.value)}
+                placeholder="Ask about this briefing..."
+                className="w-full text-xs md:text-sm rounded-xl bg-violet-500/5 dark:bg-violet-950/20 border border-violet-100/30 dark:border-violet-900/30 focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/30 text-foreground placeholder:text-muted py-2 px-3 pr-10 focus:outline-none transition-all"
+              />
+              <button
+                type="submit"
+                disabled={!followUp.trim()}
+                className="absolute right-1 top-1/2 -translate-y-1/2 text-violet-600 dark:text-violet-400 hover:text-violet-800 disabled:opacity-40 p-1.5 transition-opacity"
+              >
+                <Send size={15} />
+              </button>
+            </form>
           </div>
         </div>
       )}
@@ -438,7 +475,7 @@ export default function PatientDashboard() {
             ) : (
               <div className="space-y-4">
                 <AnimatePresence>
-                  {schedule.slice(0, 6).map((dose: any, i: number) => {
+                  {schedule.map((dose: any, i: number) => {
                     const uniqueDoseId = `${dose.medicationId}-${dose.scheduledTime}`;
                     return (
                       <motion.div 

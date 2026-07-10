@@ -5,7 +5,7 @@ import Medication from '@/models/Medication';
 import AdherenceStats from '@/models/AdherenceStats';
 import { requireAuth } from '@/lib/auth';
 import { logDoseToML } from '@/lib/mlClient';
-import { createEscalation, resolveEscalation } from '@/services/escalationService';
+import { createEscalation, resolveEscalation, recalculateStats } from '@/services/escalationService';
 
 export async function POST(req: NextRequest) {
   try {
@@ -55,18 +55,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Recalculate adherence stats for the day
-    const dayLogs = await DoseLog.find({ userId: user.id, scheduledDate });
-    const totalDoses = dayLogs.length;
-    const takenDoses = dayLogs.filter(l => l.status === 'taken').length;
-    const missedDoses = dayLogs.filter(l => l.status === 'missed').length;
-    const skippedDoses = dayLogs.filter(l => l.status === 'skipped').length;
-    const adherenceRate = totalDoses > 0 ? Math.round((takenDoses / totalDoses) * 100) : 0;
-
-    const stats = await AdherenceStats.findOneAndUpdate(
-      { userId: user.id, date: scheduledDate },
-      { totalDoses, takenDoses, missedDoses, skippedDoses, adherenceRate },
-      { upsert: true, returnDocument: 'after' }
-    );
+    await recalculateStats(user.id, scheduledDate);
+    const stats = await AdherenceStats.findOne({ userId: user.id, date: scheduledDate });
 
     // Fire-and-forget: send dose data to ML API for retraining
     const scheduledDt = new Date(scheduledTime);

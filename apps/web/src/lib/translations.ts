@@ -102,6 +102,85 @@ export const translations = {
       placeholder: "Ask about your meds...",
       intro: "Hi there! Ask me anything about your medications or schedule.",
       thinking: "Thinking..."
+    },
+    medications: {
+      title: "My Medications",
+      subtitleActive: "{count} active medication(s)",
+      subtitleTotal: "{count} total medication(s)",
+      showInactive: "Show inactive",
+      addMedication: "Add Medication",
+      editMedication: "Edit Medication",
+      noMeds: "No medications yet",
+      noMedsDesc: "Add your first medication or scan a prescription",
+      active: "Active",
+      inactive: "Inactive",
+      stockStatus: "Stock: {stock} ({days} days left)",
+      orderRefill: "Order Refill",
+      confirmDelete: "Remove {name}?",
+      toast: {
+        added: "Medication added!",
+        updated: "Medication updated!",
+        failedToSave: "Failed to save",
+        failedToUpdate: "Failed to update",
+        removed: "Medication removed",
+        failedToDelete: "Failed to delete",
+        requiredFields: "Name and dosage are required"
+      },
+      form: {
+        name: "Medication Name *",
+        genericName: "Generic Name",
+        type: "Type",
+        dosage: "Dosage *",
+        frequency: "Frequency",
+        scheduledTimes: "Scheduled Times",
+        addTime: "Add time",
+        foodInstruction: "Food Instruction",
+        startDate: "Start Date",
+        endDate: "End Date (optional)",
+        totalQuantity: "Total Quantity",
+        refillAt: "Refill Alert At",
+        notes: "Notes",
+        saveChanges: "Save Changes",
+        addMedication: "Add Medication"
+      },
+      placeholder: {
+        name: "e.g. Metformin",
+        genericName: "e.g. Metformin HCl",
+        dosage: "e.g. 500mg",
+        totalQuantity: "e.g. 30",
+        refillAt: "e.g. 5",
+        notes: "Any special instructions..."
+      },
+      tooltip: {
+        toggleActive: "Toggle active"
+      },
+      freq: {
+        once_daily: "Once daily",
+        twice_daily: "Twice daily",
+        three_times_daily: "3x daily",
+        four_times_daily: "4x daily",
+        every_other_day: "Every other day",
+        weekly: "Weekly",
+        as_needed: "As needed"
+      },
+      food: {
+        before_meal: "Before meal",
+        after_meal: "After meal",
+        with_meal: "With meal",
+        empty_stomach: "Empty stomach",
+        any_time: "Anytime"
+      },
+      types: {
+        tablet: "Tablet",
+        capsule: "Capsule",
+        syrup: "Syrup",
+        injection: "Injection",
+        drops: "Drops",
+        inhaler: "Inhaler",
+        patch: "Patch",
+        cream: "Cream",
+        other: "Other"
+      }
     }
   },
   hi: {
@@ -207,6 +286,85 @@ export const translations = {
       placeholder: "अपनी दवाओं के बारे में पूछें...",
       intro: "नमस्ते! अपनी दवाओं या कार्यक्रम के बारे में मुझसे कुछ भी पूछें।",
       thinking: "सोच रहा हूँ..."
+    },
+    medications: {
+      title: "मेरी दवाइयाँ",
+      subtitleActive: "{count} सक्रिय दवाइयाँ",
+      subtitleTotal: "{count} कुल दवाइयाँ",
+      showInactive: "निष्क्रिय दिखाएं",
+      addMedication: "दवा जोड़ें",
+      editMedication: "दवा संपादित करें",
+      noMeds: "अभी तक कोई दवा नहीं है",
+      noMedsDesc: "अपनी पहली दवा जोड़ें या प्रिस्क्रिप्शन स्कैन करें",
+      active: "सक्रिय",
+      inactive: "निष्क्रिय",
+      stockStatus: "स्टॉक: {stock} ({days} दिन शेष)",
+      orderRefill: "रिफिल ऑर्डर करें",
+      confirmDelete: "क्या आप {name} को हटाना चाहते हैं?",
+      toast: {
+        added: "दवा जोड़ी गई!",
+        updated: "दवा अपडेट की गई!",
+        failedToSave: "सहेजने में विफल",
+        failedToUpdate: "अपडेट करने में विफल",
+        removed: "दवा हटा दी गई",
+        failedToDelete: "हटाने में विफल",
+        requiredFields: "नाम और खुराक आवश्यक हैं"
+      },
+      form: {
+        name: "दवा का नाम *",
+        genericName: "जेनेरिक नाम",
+        type: "प्रकार",
+        dosage: "खुराक *",
+        frequency: "आवृत्ति (फ़्रीक्वेंसी)",
+        scheduledTimes: "निर्धारित समय",
+        addTime: "समय जोड़ें",
+        foodInstruction: "भोजन निर्देश",
+        startDate: "प्रारंभ तिथि",
+        endDate: "समाप्ति तिथि (वैकल्पिक)",
+        totalQuantity: "कुल मात्रा",
+        refillAt: "रिफिल अलर्ट यहाँ",
+        notes: "टिप्पणी",
+        saveChanges: "बदलाव सहेजें",
+        addMedication: "दवा जोड़ें"
+      },
+      placeholder: {
+        name: "जैसे: मेटफॉर्मिन",
+        genericName: "जैसे: मेटफॉर्मिन एचसीएल",
+        dosage: "जैसे: 500 मिलीग्राम",
+        totalQuantity: "जैसे: 30",
+        refillAt: "जैसे: 5",
+        notes: "कोई विशेष निर्देश..."
+      },
+      tooltip: {
+        toggleActive: "सक्रिय स्थिति बदलें"
+      },
+      freq: {
+        once_daily: "दिन में एक बार",
+        twice_daily: "दिन में दो बार",
+        three_times_daily: "दिन में 3 बार",
+        four_times_daily: "दिन में 4 बार",
+        every_other_day: "एक दिन छोड़कर",
+        weekly: "साप्ताहिक",
+        as_needed: "आवश्यकतानुसार"
+      },
+      food: {
+        before_meal: "भोजन से पहले",
+        after_meal: "भोजन के बाद",
+        with_meal: "भोजन के साथ",
+        empty_stomach: "खाली पेट",
+        any_time: "किसी भी समय"
+      },
+      types: {
+        tablet: "टैबलेट",
+        capsule: "कैप्सूल",
+        syrup: "सिरप",
+        injection: "इंजेक्शन",
+        drops: "ड्रॉप्स",
+        inhaler: "इनहेलर",
+        patch: "पैच",
+        cream: "क्रीम",
+        other: "अन्य"
+      }
     }
   },
   mr: {
@@ -417,6 +575,85 @@ export const translations = {
       placeholder: "உங்கள் மருந்துகளைப் பற்றி கேளுங்கள்...",
       intro: "வணக்கம்! உங்கள் மருந்துகள் அல்லது அட்டவணை பற்றி என்னிடம் எதையும் கேளுங்கள்.",
       thinking: "யோசிக்கிறது..."
+    },
+    medications: {
+      title: "எனது மருந்துகள்",
+      subtitleActive: "{count} செயலில் உள்ள மருந்துகள்",
+      subtitleTotal: "{count} மொத்த மருந்துகள்",
+      showInactive: "செயலற்றதைக் காட்டு",
+      addMedication: "மருந்து சேர்க்கவும்",
+      editMedication: "மருந்தை திருத்தவும்",
+      noMeds: "இன்னும் மருந்துகள் இல்லை",
+      noMedsDesc: "உங்கள் முதல் மருந்தைச் சேர்க்கவும் அல்லது மருந்துச் சீட்டை ஸ்கேன் செய்யவும்",
+      active: "செயலில் உள்ளது",
+      inactive: "செயலற்றது",
+      stockStatus: "இருப்பு: {stock} ({days} நாட்கள் மீதமுள்ளன)",
+      orderRefill: "மறுபடியும் ஆர்டர் செய்க",
+      confirmDelete: "{name}-ஐ நீக்கவா?",
+      toast: {
+        added: "மருந்து சேர்க்கப்பட்டது!",
+        updated: "மருந்து புதுப்பிக்கப்பட்டது!",
+        failedToSave: "சேமிக்க முடியவில்லை",
+        failedToUpdate: "புதுப்பிக்க முடியவில்லை",
+        removed: "மருந்து நீக்கப்பட்டது",
+        failedToDelete: "நீக்க முடியவில்லை",
+        requiredFields: "பெயர் மற்றும் டோஸ் தேவை"
+      },
+      form: {
+        name: "மருந்தின் பெயர் *",
+        genericName: "பொதுவான பெயர் (ஜெனரிக் பெயர்)",
+        type: "வகை",
+        dosage: "டோஸ் *",
+        frequency: "அதிர்வெண்",
+        scheduledTimes: "திட்டமிடப்பட்ட நேரங்கள்",
+        addTime: "நேரம் சேர்க்க",
+        foodInstruction: "உணவு அறிவுறுத்தல்",
+        startDate: "தொடக்க தேதி",
+        endDate: "முடிவு தேதி (விருப்பத்தேர்வு)",
+        totalQuantity: "மொத்த அளவு",
+        refillAt: "மறு நிரப்பல் எச்சரிக்கை",
+        notes: "குறிப்புகள்",
+        saveChanges: "மாற்றங்களைச் சேமிக்கவும்",
+        addMedication: "மருந்து சேர்க்கவும்"
+      },
+      placeholder: {
+        name: "உதாரணமாக: மெட்ஃபார்மின்",
+        genericName: "உதாரணமாக: மெட்ஃபார்மின் HCl",
+        dosage: "உதாரணமாக: 500mg",
+        totalQuantity: "உதாரணமாக: 30",
+        refillAt: "உதாரணமாக: 5",
+        notes: "ஏதேனும் சிறப்பு வழிமுறைகள்..."
+      },
+      tooltip: {
+        toggleActive: "செயலில் நிலையை மாற்று"
+      },
+      freq: {
+        once_daily: "தினமும் ஒரு முறை",
+        twice_daily: "தினமும் இரண்டு முறை",
+        three_times_daily: "தினமும் 3 முறை",
+        four_times_daily: "தினமும் 4 முறை",
+        every_other_day: "ஒரு நாள் விட்டு ஒரு நாள்",
+        weekly: "வாரம் ஒருமுறை",
+        as_needed: "தேவைக்கேற்ப"
+      },
+      food: {
+        before_meal: "உணவுக்கு முன்",
+        after_meal: "உணவுக்கு பின்",
+        with_meal: "உணவுடன்",
+        empty_stomach: "வெறும் வயிற்றில்",
+        any_time: "எந்த நேரத்திலும்"
+      },
+      types: {
+        tablet: "மாத்திரை",
+        capsule: "காப்ஸ்யூல்",
+        syrup: "சிரப்",
+        injection: "ஊசி (இன்ஜெக்ஷன்)",
+        drops: "சொட்டு மருந்து",
+        inhaler: "இன்ஹேலர்",
+        patch: "பேட்ச்",
+        cream: "கிரீம்",
+        other: "மற்றவை"
+      }
     }
   },
   te: {
@@ -522,6 +759,85 @@ export const translations = {
       placeholder: "మీ మందుల గురించి అడగండి...",
       intro: "హలో! మీ మందులు లేదా షెడ్యూల్ గురించి నన్ను ఏదైనా అడగండి.",
       thinking: "ఆలోచిస్తోంది..."
+    },
+    medications: {
+      title: "నా మందులు",
+      subtitleActive: "{count} క్రియాశీల మందులు",
+      subtitleTotal: "{count} మొత్తం మందులు",
+      showInactive: "నిష్క్రియమైనవి చూపించు",
+      addMedication: "మందును జోడించండి",
+      editMedication: "మందును సవరించండి",
+      noMeds: "ఇంకా ఎలాంటి మందులు లేవు",
+      noMedsDesc: "మీ మొదటి మందును జోడించండి లేదా ప్రిస్క్రిప్షన్‌ను స్కాన్ చేయండి",
+      active: "సక్రియంగా ఉంది",
+      inactive: "నిష్క్రియంగా ఉంది",
+      stockStatus: "స్టాక్: {stock} ({days} రోజులు మిగిలి ఉన్నాయి)",
+      orderRefill: "రీఫిల్ ఆర్డర్ చేయండి",
+      confirmDelete: "{name}ని తొలగించాలా?",
+      toast: {
+        added: "మందు జోడించబడింది!",
+        updated: "మందు నవీకరించబడింది!",
+        failedToSave: "సేవ్ చేయడం విఫలమైంది",
+        failedToUpdate: "నవీకరించడం విఫలమైంది",
+        removed: "మందు తొలగించబడింది",
+        failedToDelete: "తొలగించడం విఫలమైంది",
+        requiredFields: "పేరు మరియు మోతాదు అవసరం"
+      },
+      form: {
+        name: "మందు పేరు *",
+        genericName: "జెనరిక్ పేరు",
+        type: "రకం",
+        dosage: "మోతాదు *",
+        frequency: "ఫ్రీక్వెన్సీ",
+        scheduledTimes: "షెడ్యూల్ చేసిన సమయాలు",
+        addTime: "సమయం జోడించు",
+        foodInstruction: "ఆహార సూచన",
+        startDate: "ప్రారంభ తేదీ",
+        endDate: "ముగింపు తేదీ (ఐచ్ఛికం)",
+        totalQuantity: "మొత్తం పరిమాణం",
+        refillAt: "రీఫిల్ హెచ్చరిక",
+        notes: "గమనికలు",
+        saveChanges: "మార్పులను సేవ్ చేయి",
+        addMedication: "మందును జోడించండి"
+      },
+      placeholder: {
+        name: "ఉదా: మెట్‌ఫార్మిన్",
+        genericName: "ఉదా: మెట్‌ఫార్మిన్ HCl",
+        dosage: "ఉదా: 500mg",
+        totalQuantity: "ఉదా: 30",
+        refillAt: "ఉదా: 5",
+        notes: "ఏవైనా ప్రత్యేక సూచనలు..."
+      },
+      tooltip: {
+        toggleActive: "సక్రియ స్థితిని మార్చండి"
+      },
+      freq: {
+        once_daily: "రోజుకు ఒకసారి",
+        twice_daily: "రోజుకు రెండు సార్లు",
+        three_times_daily: "రోజుకు 3 సార్లు",
+        four_times_daily: "రోజుకు 4 సార్లు",
+        every_other_day: "మార్చి మార్చి రోజు",
+        weekly: "వారానికి ఒకసారి",
+        as_needed: "అవసరమైనప్పుడు"
+      },
+      food: {
+        before_meal: "భోజనానికి ముందు",
+        after_meal: "భోజనం తర్వాత",
+        with_meal: "భోజనంతో పాటు",
+        empty_stomach: "పరగడుపున",
+        any_time: "ఏ సమయమైనా"
+      },
+      types: {
+        tablet: "టాబ్లెట్",
+        capsule: "క్యాప్సూల్",
+        syrup: "సిరప్",
+        injection: "ఇంజెక్షన్",
+        drops: "చుక్కలు",
+        inhaler: "ఇన్హేలర్",
+        patch: "ప్యాచ్",
+        cream: "క్రీమ్",
+        other: "ఇతర"
+      }
     }
   },
   bn: {
@@ -627,6 +943,85 @@ export const translations = {
       placeholder: "আপনার ওষুধ সম্পর্কে জিজ্ঞাসা করুন...",
       intro: "হ্যালো! আপনার ওষুধ বা সময়সূচী সম্পর্কে আমাকে কিছু জিজ্ঞাসা করুন।",
       thinking: "ভাবছি..."
+    },
+    medications: {
+      title: "আমার ওষুধসমূহ",
+      subtitleActive: "{count}টি সক্রিয় ওষুধ",
+      subtitleTotal: "{count}টি মোট ওষুধ",
+      showInactive: "নিষ্ক্রিয় ওষুধ দেখান",
+      addMedication: "ওষুধ যোগ করুন",
+      editMedication: "ওষুধ পরিবর্তন করুন",
+      noMeds: "এখনো কোনো ওষুধ যোগ করা হয়নি",
+      noMedsDesc: "আপনার প্রথম ওষুধ যোগ করুন বা প্রেসক্রিপশন স্ক্যান করুন",
+      active: "সক্রিয়",
+      inactive: "নিষ্ক্রিয়",
+      stockStatus: "স্টক: {stock} ({days} দিন বাকি)",
+      orderRefill: "রিফিল অর্ডার করুন",
+      confirmDelete: "{name} অপসারণ করবেন?",
+      toast: {
+        added: "ওষুধ যোগ করা হয়েছে!",
+        updated: "ওষুধ আপডেট করা হয়েছে!",
+        failedToSave: "সংরক্ষণ করতে ব্যর্থ",
+        failedToUpdate: "আপডেট করতে ব্যর্থ",
+        removed: "ওষুধ অপসারণ করা হয়েছে",
+        failedToDelete: "অপসারণ করতে ব্যর্থ",
+        requiredFields: "নাম এবং ডোজ আবশ্যক"
+      },
+      form: {
+        name: "ওষুধের নাম *",
+        genericName: "জেনেরিক নাম",
+        type: "ধরণ",
+        dosage: "ডোজ *",
+        frequency: "ফ্রিকোয়েন্সি",
+        scheduledTimes: "নির্ধারিত সময়",
+        addTime: "সময় যোগ করুন",
+        foodInstruction: "খাবার নির্দেশিকা",
+        startDate: "শুরুর তারিখ",
+        endDate: "শেষের তারিখ (ঐচ্ছিক)",
+        totalQuantity: "মোট পরিমাণ",
+        refillAt: "রিফিল সতর্কতা দিন",
+        notes: "টীকা",
+        saveChanges: "পরিবর্তন সংরক্ষণ করুন",
+        addMedication: "ওষুধ যোগ করুন"
+      },
+      placeholder: {
+        name: "উদাঃ মেটফরমিন",
+        genericName: "উদাঃ মেটফরমিন এইচসিএল",
+        dosage: "উদাঃ ৫০০ মিলিগ্রাম",
+        totalQuantity: "উদাঃ ৩০",
+        refillAt: "উদাঃ ৫",
+        notes: "যেকোনো বিশেষ নির্দেশনা..."
+      },
+      tooltip: {
+        toggleActive: "সক্রিয় অবস্থা পরিবর্তন করুন"
+      },
+      freq: {
+        once_daily: "দিনে একবার",
+        twice_daily: "দিনে দুবার",
+        three_times_daily: "দিনে ৩ বার",
+        four_times_daily: "দিনে ৪ বার",
+        every_other_day: "একদিন পর পর",
+        weekly: "সাপ্তাহিক",
+        as_needed: "প্রয়োজন অনুযায়ী"
+      },
+      food: {
+        before_meal: "খাবারের আগে",
+        after_meal: "খাবারের পরে",
+        with_meal: "খাবারের সাথে",
+        empty_stomach: "খালি পেটে",
+        any_time: "যেকোনো সময়"
+      },
+      types: {
+        tablet: "ট্যাবলেট",
+        capsule: "ক্যাপসুল",
+        syrup: "সিরাপ",
+        injection: "ইনজেকশন",
+        drops: "ড্রপ",
+        inhaler: "ইনহেলার",
+        patch: "প্যাচ",
+        cream: "ক্রিম",
+        other: "অন্যান্য"
+      }
     }
   }
 };

@@ -35,6 +35,37 @@ export async function analyzeImage(
   return result.response.text();
 }
 
+function mapFrequencyToTimesLocal(frequency?: string): string[] {
+  if (!frequency) return ['09:00'];
+  const f = frequency.toLowerCase();
+  if (f.includes('thrice') || f.includes('tds') || f.includes('tid') || f.includes('three') || f.includes('1-1-1')) return ['08:00', '14:00', '20:00'];
+  if (f.includes('twice') || f.includes('bd') || f.includes('bid') || f.includes('two') || f.includes('1-0-1')) return ['08:00', '20:00'];
+  if (f.includes('four') || f.includes('qid') || f.includes('1-1-1-1')) return ['06:00', '12:00', '18:00', '00:00'];
+  if (f.includes('night') || f.includes('bed') || f.includes('hs') || f.includes('0-0-1')) return ['21:00'];
+  if (f.includes('morning') || f.includes('1-0-0')) return ['08:00'];
+  if (f.includes('afternoon') || f.includes('noon')) return ['13:00'];
+  if (f.includes('evening')) return ['18:00'];
+  return ['09:00'];
+}
+
+function parseDurationDays(duration?: string): number {
+  if (!duration) return 30;
+  const d = duration.toLowerCase().trim();
+  const num = parseInt(d.replace(/[^0-9]/g, ''), 10);
+  if (isNaN(num)) return 30;
+  
+  if (d.includes('week')) {
+    return num * 7;
+  }
+  if (d.includes('month')) {
+    return num * 30;
+  }
+  if (d.includes('year')) {
+    return num * 365;
+  }
+  return num;
+}
+
 // ─── OCR + Parse prescription image ────────────────────────────────────────
 export async function extractPrescription(base64Image: string, mimeType: string) {
   const prompt = `You are an expert medical prescription reader specializing in Indian prescriptions.

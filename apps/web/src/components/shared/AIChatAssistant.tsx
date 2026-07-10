@@ -7,9 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Send, Loader2, Bot, Sparkles } from 'lucide-react';
 
 export default function AIChatAssistant() {
-  const { messages, addMessage } = useChatStore();
+  const { messages, isLoading, sendMessage } = useChatStore();
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -21,21 +20,11 @@ export default function AIChatAssistant() {
   }, [messages, isLoading]);
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || isLoading) return;
     
     const userMsg = input;
     setInput('');
-    addMessage({ role: 'user', text: userMsg });
-    setIsLoading(true);
-
-    try {
-      const res = await aiService.ask(userMsg);
-      addMessage({ role: 'ai', text: res.data.answer });
-    } catch {
-      addMessage({ role: 'ai', text: 'Sorry, I am having trouble connecting right now.' });
-    } finally {
-      setIsLoading(false);
-    }
+    await sendMessage(userMsg);
   };
 
   return (

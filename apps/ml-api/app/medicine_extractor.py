@@ -30,6 +30,7 @@ FREQUENCY_PATTERNS = {
     'twice_daily': [r'1\s*[-x×]\s*2', r'bd\b', r'bid\b', r'twice\s*daily', r'twice\s*a\s*day'],
     'thrice_daily': [r'1\s*[-x×]\s*3', r'tid\b', r'tds\b', r'thrice\s*daily', r'three\s*times'],
     'four_daily': [r'1\s*[-x×]\s*4', r'qid\b', r'qds\b', r'four\s*times'],
+    'no_dose': [r'0\s*[-x×]\s*0\s*[-x×]\s*0', r'0-0-0'],
     'before_food': [r'bf\b', r'ac\b', r'before\s*(food|meal|eating)'],
     'after_food': [r'af\b', r'pc\b', r'after\s*(food|meal|eating)'],
     'at_bedtime': [r'hs\b', r'at\s*bedtime', r'at\s*night', r'nocte'],

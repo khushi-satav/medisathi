@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import connectDB from '@/lib/mongoose';
 import User from '@/models/User';
-import twilio from 'twilio';
+import { sendSMS, makePhoneCall } from '@/lib/notificationHelper';
+import { getSmsTemplates } from '@/lib/smsTemplates';
 
 export async function POST(req: NextRequest) {
   try {
-    const userAuth = await requireAuth(req);
+    const userAuth = requireAuth(req);
     await connectDB();
 
     const { latitude, longitude } = await req.json().catch(() => ({ latitude: null, longitude: null }));
@@ -18,57 +19,54 @@ export async function POST(req: NextRequest) {
 
     const contacts = patient.emergencyContacts || [];
     if (contacts.length === 0) {
-      return NextResponse.json({ error: 'No emergency contacts found.' }, { status: 400 });
+      return NextResponse.json({ error: 'No emergency contacts found. Add SOS contacts in Settings.' }, { status: 400 });
     }
 
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const twilioPhone = process.env.TWILIO_PHONE_NUMBER;
+    const t = getSmsTemplates(patient.language);
 
-    if (!accountSid || !authToken || !twilioPhone) {
-      console.warn("Twilio credentials missing. Returning success for dev environment.");
-      return NextResponse.json({ success: true, message: "SOS Simulated" });
-    }
+    const locationUrl =
+      latitude && longitude
+        ? `https://maps.google.com/?q=${latitude},${longitude}`
+        : undefined;
 
-    const twilioClient = twilio(accountSid, authToken);
+    const smsBody = t.sosAlert(patient.name, patient.sosMessage || 'EMERGENCY: I need help!', locationUrl);
 
-    const timeString = new Date().toLocaleTimeString(patient.language || 'en-US', { timeZone: patient.timezone, hour: 'numeric', minute: '2-digit' });
-    let smsBody = `${patient.sosMessage || 'EMERGENCY: I need help!'} - ${patient.name} pressed SOS at ${timeString}.`;
+    const twimlVoice = `<Response><Say voice="alice">Emergency Alert. ${patient.name} has pressed the SOS button. Please check on them immediately.</Say></Response>`;
 
-    if (latitude && longitude) {
-      smsBody += ` Location: https://maps.google.com/?q=${latitude},${longitude}`;
-    }
+    // Fire SMS + voice call to each contact in parallel; collect results
+    const results = await Promise.allSettled(
+      contacts
+        .filter((c: any) => !!c.phone)
+        .flatMap((contact: any) => [
+          sendSMS(contact.phone, smsBody),
+          makePhoneCall(contact.phone, `Emergency Alert. ${patient.name} has pressed the SOS button. Please check on them immediately.`),
+        ])
+    );
 
-    const voiceMessage = `<Response><Say voice="alice">Emergency Alert. ${patient.name} has pressed the SOS button. Please check on them immediately.</Say></Response>`;
+    // Count successes vs failures for the response summary
+    const summary = results.reduce(
+      (acc, r) => {
+        if (r.status === 'fulfilled' && r.value.success) acc.sent++;
+        else acc.failed++;
+        return acc;
+      },
+      { sent: 0, failed: 0 }
+    );
 
-    // Execute SMS and Calls simultaneously for all emergency contacts
-    const promises = [];
+    // Log the full twiml used separately (for debugging)
+    console.log('[SOS] TwiML voice message:', twimlVoice);
 
-    for (const contact of contacts) {
-      if (contact.phone) {
-        promises.push(
-          twilioClient.messages.create({
-            body: smsBody,
-            to: contact.phone,
-            from: twilioPhone
-          }).catch(e => console.error(`Failed SMS to ${contact.phone}`, e))
-        );
-
-        promises.push(
-          twilioClient.calls.create({
-            twiml: voiceMessage,
-            to: contact.phone,
-            from: twilioPhone
-          }).catch(e => console.error(`Failed Call to ${contact.phone}`, e))
-        );
-      }
-    }
-
-    await Promise.allSettled(promises);
-
-    return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success: true,
+      contactsNotified: contacts.filter((c: any) => c.phone).length,
+      sent: summary.sent,
+      failed: summary.failed,
+    });
   } catch (error: any) {
-    console.error('SOS API error:', error);
+    console.error('[SOS API] Error:', error);
+    if (error.message === 'UNAUTHORIZED') {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
