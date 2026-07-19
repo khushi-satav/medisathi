@@ -17,15 +17,18 @@ async function run() {
 
   const db = mongoose.connection.db;
 
-  // 1. Inspect patient Sunita Devi
-  const patient = await db.collection('users').findOne({ email: 'sunita@gmail.com' });
-  console.log('Patient Sunita Devi:', JSON.stringify(patient, null, 2));
+  // 1. Inspect patient Anshul Vijayvargiya
+  const patient = await db.collection('users').findOne({ email: 'anshulvijayvargiya4@gmail.com' });
+  console.log('Patient Anshul Vijayvargiya:', JSON.stringify(patient, null, 2));
 
-  // 2. Inspect escalations
-  const escalations = await db.collection('escalations').find({}).toArray();
-  console.log(`\nEscalations count: ${escalations.length}`);
-  for (const e of escalations) {
-    console.log(JSON.stringify(e, null, 2));
+  if (patient) {
+    const meds = await db.collection('medications').find({ userId: patient._id }).toArray();
+    console.log('\n--- MEDICATIONS ---');
+    console.log(JSON.stringify(meds, null, 2));
+
+    const logs = await db.collection('doselogs').find({ userId: patient._id }).toArray();
+    console.log('\n--- DOSE LOGS ---');
+    console.log(JSON.stringify(logs, null, 2));
   }
 
   await mongoose.disconnect();
