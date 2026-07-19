@@ -1,4 +1,6 @@
 import { translations } from './translations';
+import type { Locale as DateFnsLocale } from 'date-fns';
+import { enUS, hi, ta, te, bn } from 'date-fns/locale';
 
 export type SupportedLanguage = 'en' | 'hi' | 'mr' | 'ta' | 'te' | 'bn';
 
@@ -58,3 +60,36 @@ export function detectBrowserLanguage(): SupportedLanguage {
   const supported = SUPPORTED_LANGUAGES.map(l => l.code);
   return supported.includes(lang as SupportedLanguage) ? (lang as SupportedLanguage) : 'en';
 }
+
+/**
+ * Maps each SupportedLanguage to a date-fns Locale object for locale-aware
+ * date formatting (e.g. format(), formatDistanceToNow()).
+ *
+ * NOTE: date-fns v4 does not ship a Marathi (mr) locale.  We fall back to
+ * Hindi (hi) because both use the Devanagari script and share grammatical
+ * structure close enough for date strings.
+ */
+export const DATE_FNS_LOCALE_MAP: Record<SupportedLanguage, DateFnsLocale> = {
+  en: enUS,
+  hi: hi,
+  mr: hi,   // fallback: no Marathi locale in date-fns v4; Devanagari script match
+  ta: ta,
+  te: te,
+  bn: bn,
+};
+
+/**
+ * Maps each SupportedLanguage to its BCP-47 language tag for Intl APIs
+ * (e.g. toLocaleDateString, Intl.NumberFormat, Intl.DateTimeFormat).
+ *
+ * Marathi uses 'mr-IN' which is natively supported by all modern Intl
+ * implementations even though date-fns does not ship an mr locale.
+ */
+export const BCP47_LOCALE_MAP: Record<SupportedLanguage, string> = {
+  en: 'en-IN',
+  hi: 'hi-IN',
+  mr: 'mr-IN',
+  ta: 'ta-IN',
+  te: 'te-IN',
+  bn: 'bn-IN',
+};

@@ -273,12 +273,14 @@ export default function SettingsPage() {
     mutationFn: (language: string) => authService.updateMe({ language }),
     onSuccess: (res) => {
       updateUser(res.data.user);
-      toast.success('Language updated!');
+      toast.success('Language updated!', { id: 'lang-update' });
     },
-    onError: () => toast.error('Failed to update language'),
+    onError: () => toast.error('Failed to update language', { id: 'lang-update' }),
   });
 
   const handleLanguageChange = (newLang: SupportedLanguage) => {
+    // No-op: clicking the already-active language should not re-trigger an API call.
+    if (newLang === lang) return;
     setLang(newLang);
     saveLanguageMutation.mutate(newLang);
   };

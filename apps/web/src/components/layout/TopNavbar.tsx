@@ -9,12 +9,15 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import GlobalSearch from '@/components/layout/GlobalSearch';
 import NotificationBell from '@/components/layout/NotificationBell';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { DATE_FNS_LOCALE_MAP } from '@/lib/i18n';
 
 export default function TopNavbar({ onOpenAIChat }: { onOpenAIChat: () => void }) {
   const [time, setTime] = useState(new Date());
   const { user, logout } = useAuthStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const router = useRouter();
+  const { lang, t } = useLanguage();
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000);
@@ -36,7 +39,7 @@ export default function TopNavbar({ onOpenAIChat }: { onOpenAIChat: () => void }
             Hello, {user?.name?.split(' ')[0] || 'Friend'} 👋
           </h2>
           <p className="text-sm font-medium text-muted">
-            {format(time, 'EEEE, MMMM do yyyy | h:mm a')}
+            {format(time, lang === 'en' ? 'EEEE, MMMM do yyyy | h:mm a' : 'EEEE, d MMMM yyyy | h:mm a', { locale: DATE_FNS_LOCALE_MAP[lang] })}
           </p>
         </div>
       </div>
@@ -55,7 +58,7 @@ export default function TopNavbar({ onOpenAIChat }: { onOpenAIChat: () => void }
               className="flex items-center space-x-2 px-4 py-2 rounded-full bg-gradient-to-r from-secondary/20 to-primary/20 text-primary-dark hover:from-secondary/30 hover:to-primary/30 transition-all shadow-sm shadow-primary/5 border border-primary/15"
             >
               <Sparkles size={16} className="text-primary" />
-              <span className="text-sm font-semibold">Ask AI</span>
+              <span className="text-sm font-semibold">{t('common.askAI')}</span>
             </button>
           </>
         )}

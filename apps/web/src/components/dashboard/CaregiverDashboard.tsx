@@ -10,6 +10,8 @@ import { motion, type Variants } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { getSocket } from '@/lib/socket';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { DATE_FNS_LOCALE_MAP } from '@/lib/i18n';
 
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 15 },
@@ -24,6 +26,7 @@ export default function CaregiverDashboard() {
   });
 
   const [livePatients, setLivePatients] = useState<any[]>([]);
+  const { lang } = useLanguage();
 
   // Sync state when query data changes
   useEffect(() => {
@@ -153,7 +156,7 @@ export default function CaregiverDashboard() {
                     </div>
                     {patient.lastSeen && (
                       <span className="text-[10px] font-medium text-slate-500 italic">
-                        {patient.name} opened app {formatDistanceToNow(new Date(patient.lastSeen))} ago
+                        {patient.name} opened app {formatDistanceToNow(new Date(patient.lastSeen), { locale: DATE_FNS_LOCALE_MAP[lang] })} ago
                       </span>
                     )}
                   </div>

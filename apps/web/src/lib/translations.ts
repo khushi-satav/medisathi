@@ -23,7 +23,8 @@ export const translations = {
       edit: "Edit",
       add: "Add",
       remove: "Remove",
-      loading: "Loading..."
+      loading: "Loading...",
+      askAI: "Ask AI"
     },
     onboarding: {
       welcomeTitle: "Namaste, {name} 🙏",
@@ -207,7 +208,8 @@ export const translations = {
       edit: "संपादित करें",
       add: "जोड़ें",
       remove: "हटाएं",
-      loading: "लोड हो रहा है..."
+      loading: "लोड हो रहा है...",
+      askAI: "AI से पूछें"
     },
     onboarding: {
       welcomeTitle: "नमस्ते, {name} 🙏",
@@ -391,7 +393,8 @@ export const translations = {
       edit: "संपादित करा",
       add: "जोडा",
       remove: "काढून टाका",
-      loading: "लोड होत आहे..."
+      loading: "लोड होत आहे...",
+      askAI: "AI ला विचारा"
     },
     onboarding: {
       welcomeTitle: "नमस्ते, {name} 🙏",
@@ -470,6 +473,85 @@ export const translations = {
       placeholder: "तुमच्या औषधांबद्दल विचारा...",
       intro: "नमस्कार! तुमच्या औषधांबद्दल किंवा वेळापत्रकाबद्दल मला काहीही विचारा.",
       thinking: "विचार करत आहे..."
+    },
+    medications: {
+      title: "माझी औषधे",
+      subtitleActive: "{count} सक्रिय औषधे",
+      subtitleTotal: "{count} एकूण औषधे",
+      showInactive: "निष्क्रिय दाखवा",
+      addMedication: "औषध जोडा",
+      editMedication: "औषध संपादित करा",
+      noMeds: "अद्याप कोणतीही औषधे नाहीत",
+      noMedsDesc: "तुमचे पहिले औषध जोडा किंवा प्रिस्क्रिप्शन स्कॅन करा",
+      active: "सक्रिय",
+      inactive: "निष्क्रिय",
+      stockStatus: "साठा: {stock} ({days} दिवस शिल्लक)",
+      orderRefill: "रिफिल ऑर्डर करा",
+      confirmDelete: "{name} काढायचे का?",
+      toast: {
+        added: "औषध जोडले!",
+        updated: "औषध अपडेट केले!",
+        failedToSave: "जतन करणे अयशस्वी",
+        failedToUpdate: "अपडेट करणे अयशस्वी",
+        removed: "औषध काढले",
+        failedToDelete: "हटवणे अयशस्वी",
+        requiredFields: "नाव आणि डोस आवश्यक आहेत"
+      },
+      form: {
+        name: "औषधाचे नाव *",
+        genericName: "जेनेरिक नाव",
+        type: "प्रकार",
+        dosage: "डोस *",
+        frequency: "वारंवारता",
+        scheduledTimes: "निर्धारित वेळा",
+        addTime: "वेळ जोडा",
+        foodInstruction: "अन्न सूचना",
+        startDate: "सुरुवात तारीख",
+        endDate: "समाप्ती तारीख (पर्यायी)",
+        totalQuantity: "एकूण प्रमाण",
+        refillAt: "रिफिल अलर्ट",
+        notes: "टिपणी",
+        saveChanges: "बदल जतन करा",
+        addMedication: "औषध जोडा"
+      },
+      placeholder: {
+        name: "उदा. मेटफॉर्मिन",
+        genericName: "उदा. मेटफॉर्मिन HCl",
+        dosage: "उदा. 500mg",
+        totalQuantity: "उदा. 30",
+        refillAt: "उदा. 5",
+        notes: "कोणत्याही विशेष सूचना..."
+      },
+      tooltip: {
+        toggleActive: "सक्रिय स्थिती बदला"
+      },
+      freq: {
+        once_daily: "दिवसातून एकदा",
+        twice_daily: "दिवसातून दोनदा",
+        three_times_daily: "दिवसातून ३ वेळा",
+        four_times_daily: "दिवसातून ४ वेळा",
+        every_other_day: "एक दिवस आड",
+        weekly: "साप्ताहिक",
+        as_needed: "आवश्यकतेनुसार"
+      },
+      food: {
+        before_meal: "जेवणापूर्वी",
+        after_meal: "जेवणानंतर",
+        with_meal: "जेवणासोबत",
+        empty_stomach: "रिकाम्या पोटी",
+        any_time: "कधीही"
+      },
+      types: {
+        tablet: "टॅब्लेट",
+        capsule: "कॅप्सूल",
+        syrup: "सिरप",
+        injection: "इंजेक्शन",
+        drops: "थेंब",
+        inhaler: "इनहेलर",
+        patch: "पॅच",
+        cream: "क्रीम",
+        other: "इतर"
+      }
     }
   },
   ta: {
@@ -496,7 +578,8 @@ export const translations = {
       edit: "திருத்து",
       add: "சேர்",
       remove: "நீக்கு",
-      loading: "ஏற்றப்படுகிறது..."
+      loading: "ஏற்றப்படுகிறது...",
+      askAI: "AI-யிடம் கேளுங்கள்"
     },
     onboarding: {
       welcomeTitle: "வணக்கம், {name} 🙏",
@@ -680,7 +763,8 @@ export const translations = {
       edit: "సవరించు",
       add: "జోడించు",
       remove: "తొలగించు",
-      loading: "లోడ్ అవుతోంది..."
+      loading: "లోడ్ అవుతోంది...",
+      askAI: "AI ని అడగండి"
     },
     onboarding: {
       welcomeTitle: "నమస్తే, {name} 🙏",
@@ -864,7 +948,8 @@ export const translations = {
       edit: "সম্পাদনা",
       add: "যোগ করুন",
       remove: "মুছে ফেলুন",
-      loading: "লোড হচ্ছে..."
+      loading: "লোড হচ্ছে...",
+      askAI: "AI-কে জিজ্ঞেস করুন"
     },
     onboarding: {
       welcomeTitle: "নমস্কার, {name} 🙏",
