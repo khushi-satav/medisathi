@@ -10,6 +10,7 @@ import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { getSocket } from '@/lib/socket';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 function greeting() {
   const h = new Date().getHours();
@@ -95,15 +96,29 @@ const itemVariants: Variants = {
 function AIBriefingCard() {
   const { user } = useAuthStore();
   const { sendMessage } = useChatStore();
+  const { lang } = useLanguage();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [followUp, setFollowUp] = useState('');
 
-  const { data: briefing, isLoading, isError, refetch } = useQuery({
-    queryKey: ['daily-briefing'],
-    queryFn: () => aiService.getDailyBriefing().then(res => res.data.briefing),
+  // Include `lang` in the query key so a cached briefing from a previous
+  // locale is never served after a language switch.
+  // The API now returns { briefing, noMeds, interactions } — return the whole
+  // object so the component can branch on noMeds and render interactions
+  // verbatim without passing them through the LLM.
+  const { data: briefingData, isLoading, isError, refetch } = useQuery({
+    queryKey: ['daily-briefing', lang],
+    queryFn: () => aiService.getDailyBriefing(lang).then(res => res.data as {
+      briefing: string | null;
+      noMeds: boolean;
+      interactions: string[];
+    }),
     staleTime: 1000 * 60 * 60,
   });
+
+  const briefing = briefingData?.briefing ?? null;
+  const noMeds = briefingData?.noMeds ?? false;
+  const interactions = briefingData?.interactions ?? [];
 
   useEffect(() => {
     return () => {
@@ -114,7 +129,7 @@ function AIBriefingCard() {
   }, []);
 
   const handlePlayPause = () => {
-    if (!briefing || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (!briefing || noMeds || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
     const synth = window.speechSynthesis;
 
@@ -162,7 +177,7 @@ function AIBriefingCard() {
 
   const handleFollowUpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!followUp.trim() || !briefing) return;
+    if (!followUp.trim() || !briefing || noMeds) return;
 
     // Send the message with context
     sendMessage(followUp.trim(), briefing);
@@ -244,11 +259,44 @@ function AIBriefingCard() {
           <AlertCircle size={16} />
           <span>Failed to generate daily briefing. Please try again.</span>
         </div>
+      ) : noMeds ? (
+        // BUG 2 FIX: User has no medications — render an onboarding CTA.
+        // Never show a briefing or any adherence language when there is no data.
+        <div className="flex flex-col items-start space-y-3 py-1">
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            You haven&apos;t added any medications yet. Add your first medication to unlock your personalized daily briefing.
+          </p>
+          <Link
+            href="/medications"
+            className="inline-flex items-center space-x-2 text-sm font-bold bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl transition-all shadow-sm active:scale-[0.98]"
+          >
+            <Pill size={15} />
+            <span>Add Medication</span>
+          </Link>
+        </div>
       ) : (
         <div className="space-y-4">
+          {/* AI-generated briefing text */}
           <div className="text-sm md:text-base leading-relaxed text-slate-700 dark:text-slate-300 font-medium">
             {briefing}
           </div>
+
+          {/* BUG 3 FIX: Drug interaction warnings rendered verbatim from the DB.
+              The LLM never sees or paraphrases these — wording is fixed so
+              clinical safety information cannot be softened. */}
+          {interactions.length > 0 && (
+            <div className="space-y-2">
+              {interactions.map((warning, i) => (
+                <div
+                  key={i}
+                  className="flex items-start space-x-2 text-xs font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-xl px-3 py-2"
+                >
+                  <AlertCircle size={14} className="shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+                  <span>{warning}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-center justify-between gap-4 pt-2">
             <div className="flex items-center space-x-3">
@@ -353,7 +401,7 @@ export default function PatientDashboard() {
   }, [user]);
 
   const schedule = scheduleData?.data?.schedule ?? [];
-  const todayStats = scheduleData?.data?.stats ?? { total: 0, taken: 0, missed: 0, adherencePct: 0 };
+  const todayStats = scheduleData?.data?.stats ?? { total: 0, taken: 0, missed: 0, overdue: 0, adherencePct: 0 };
   const insights = statsData?.data ?? {};
   const streak = insights.currentStreak ?? 0;
   const weekAdh = insights.adherencePercentage ?? 0;
@@ -426,7 +474,11 @@ export default function PatientDashboard() {
         {[
           { label: "Today's Doses", value: `${taken}/${todayStats.total}`, icon: <Pill size={22} />, color: 'bg-primary/10 text-primary', border: 'border-primary/20' },
           { label: 'Taken Today',   value: taken, icon: <CheckCircle2 size={22} />, color: 'bg-emerald-100 text-emerald-700', border: 'border-emerald-200' },
-          { label: 'Missed Today',  value: todayStats.missed, icon: <AlertCircle size={22} />, color: 'bg-red-100 text-red-700', border: 'border-red-200' },
+          // "Past Due" = overdue (still actionable, within grace) + missed (no longer actionable).
+          // These are kept separate server-side so the schedule badge and Take Now button
+          // remain consistent — but the stat card shows the total so the user sees
+          // the full count of doses that need attention.
+          { label: 'Past Due',      value: (todayStats.missed ?? 0) + (todayStats.overdue ?? 0), icon: <AlertCircle size={22} />, color: 'bg-red-100 text-red-700', border: 'border-red-200' },
           { label: '7-Day Streak',  value: `${streak}d 🔥`, icon: <Flame size={22} />, color: 'bg-orange-100 text-orange-700', border: 'border-orange-200' },
         ].map((s, i) => (
           <div key={i} className={`bg-card rounded-2xl shadow-sm border border-border p-3 md:p-4 flex items-center space-x-3 md:space-x-4 border-b-4 ${s.border} transition-all`}>
@@ -504,7 +556,12 @@ export default function PatientDashboard() {
                         <span className={`text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-wider ${PILL_COLORS[dose.status] || 'bg-border text-muted'}`}>
                           {dose.status}
                         </span>
-                        {['pending', 'overdue', 'upcoming'].includes(dose.status) && (
+                        {/* Take Now is shown ONLY for overdue (within grace window) and
+                            upcoming doses.  Missed doses are past the grace period and
+                            must NOT be shown as trivially actionable — doing so would
+                            cause the same dose to appear in both the Past Due stat AND
+                            with an active Take Now button, which is the bug being fixed. */}
+                        {['overdue', 'upcoming'].includes(dose.status) && (
                           <button
                             onClick={() => logDose.mutate({ medicationId: dose.medicationId, status: 'taken', scheduledTime: dose.scheduledTime })}
                             disabled={logDose.isPending}
@@ -560,28 +617,71 @@ function AIRiskCard() {
   });
 
   const prediction = riskData?.data;
-  const level = prediction?.riskLevel || 'LOW';
-  
+
+  // insufficientData is returned by the server when the account is brand-new
+  // and there are no dose logs yet — we must not show any risk level at all.
+  const insufficientData = prediction?.insufficientData ?? false;
+
+  // riskLevel is computed deterministically server-side; it is never defaulted
+  // to LOW here on the client.  A missing/null value means no data yet.
+  const level = prediction?.riskLevel as 'LOW' | 'MEDIUM' | 'HIGH' | null ?? null;
+
+  const LEVEL_STYLES: Record<string, string> = {
+    LOW:    'bg-emerald-100 text-emerald-700 border-emerald-300 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-700',
+    MEDIUM: 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-700',
+    HIGH:   'bg-red-100 text-red-700 border-red-300 dark:bg-red-900/30 dark:text-red-400 dark:border-red-700',
+  };
+
   return (
     <div className="bg-card rounded-3xl shadow-card border border-border p-6 md:p-8">
       <div className="flex items-center space-x-2 mb-6">
         <Activity size={20} className="text-primary" />
         <h3 className="font-bold text-foreground text-xl">AI Risk Analysis</h3>
       </div>
-      {isLoading ? <div className="h-20 bg-border animate-pulse rounded-xl" /> : (
+      {isLoading ? (
+        <div className="h-20 bg-border animate-pulse rounded-xl" />
+      ) : insufficientData || level === null ? (
+        // Brand-new user with no logged doses — show a neutral placeholder.
+        // Never show LOW/MEDIUM/HIGH here; there is genuinely no signal yet.
+        <div className="space-y-3">
+          <p className="text-sm text-muted font-medium leading-relaxed">
+            Your risk analysis will appear here once you start logging doses.
+            Add your medications and log your first dose to see personalized insights.
+          </p>
+        </div>
+      ) : (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-muted uppercase tracking-wider">Risk Level</span>
-            <span className="text-xs font-black px-3 py-1 rounded-full border border-primary/20 text-primary">{level}</span>
+            <span className={`text-xs font-black px-3 py-1 rounded-full border ${LEVEL_STYLES[level] ?? 'border-border text-muted'}`}>
+              {level}
+            </span>
           </div>
-          <div className="bg-background/50 rounded-2xl p-4 border border-border">
-            <p className="text-sm font-semibold">{prediction?.recommendation || "Everything looks good!"}</p>
-          </div>
+          {/* riskFactors — verbatim from server, only shown when present */}
+          {(prediction?.riskFactors ?? []).length > 0 && (
+            <ul className="space-y-1">
+              {(prediction.riskFactors as string[]).map((f: string, i: number) => (
+                <li key={i} className="text-xs text-muted flex items-start space-x-1.5">
+                  <span className="mt-1 w-1.5 h-1.5 rounded-full bg-muted shrink-0" />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {/* recommendation — only rendered when server returns a non-null value.
+              The server guarantees this is null when missed_doses_last_7d === 0,
+              so "Keep up the good work!" is never shown on ambiguous zero data. */}
+          {prediction?.recommendation && (
+            <div className="bg-background/50 rounded-2xl p-4 border border-border">
+              <p className="text-sm font-semibold">{prediction.recommendation}</p>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
+
 
 function RefillReminderCard() {
   const { data: medsData, isLoading } = useQuery({

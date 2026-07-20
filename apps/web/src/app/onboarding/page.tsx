@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
 import api from '@/services/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Pill, Heart, Users, ChevronRight, ChevronLeft,
   CheckCircle2, Plus, Trash2, ArrowRight, Sparkles, Phone, Scan,
@@ -14,18 +15,32 @@ import {
 interface Condition   { name: string; severity: string }
 interface Contact     { name: string; phone: string; relationship: string; isPrimary: boolean }
 
-const STEPS = [
-  { id: 1, label: 'Welcome',   icon: <Sparkles size={16} /> },
-  { id: 2, label: 'Health',    icon: <Heart size={16} /> },
-  { id: 3, label: 'Emergency', icon: <Phone size={16} /> },
-  { id: 4, label: 'Caregiver', icon: <Users size={16} /> },
-];
+// Stable slugs — these values are what gets persisted to the database.
+// Display labels are resolved via t('onboarding.conditions.<slug>') at render time.
+const CONDITION_SLUGS = [
+  'type2_diabetes',
+  'hypertension',
+  'asthma',
+  'heart_disease',
+  'thyroid',
+  'arthritis',
+  'depression_anxiety',
+  'copd',
+  'kidney_disease',
+  'other',
+] as const;
 
-const CONDITIONS_LIST = [
-  'Diabetes (Type 2)', 'Hypertension', 'Asthma', 'Heart Disease',
-  'Thyroid', 'Arthritis', 'Depression / Anxiety', 'COPD', 'Kidney Disease', 'Other',
-];
-const RELATIONSHIPS = ['Parent', 'Child', 'Spouse', 'Sibling', 'Friend', 'Doctor', 'Other'];
+// Stable slugs for relationships — persisted to DB; display label resolved via t().
+const RELATIONSHIP_SLUGS = [
+  'parent',
+  'child',
+  'spouse',
+  'sibling',
+  'friend',
+  'doctor',
+  'other',
+] as const;
+
 const LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'hi', label: 'हिंदी (Hindi)' },
@@ -35,30 +50,37 @@ const LANGUAGES = [
   { code: 'bn', label: 'বাংলা (Bengali)' },
 ];
 
+const STEPS = [
+  { id: 1, labelKey: 'common.welcome', icon: <Sparkles size={16} /> },
+  { id: 2, labelKey: 'onboarding.healthTitle', icon: <Heart size={16} /> },
+  { id: 3, labelKey: 'onboarding.emergencyTitle', icon: <Phone size={16} /> },
+  { id: 4, labelKey: 'onboarding.connectCaregiver', icon: <Users size={16} /> },
+];
+
 /* ─── Step Components ───────────────────────────────────────────────────── */
 function StepWelcome({ name }: { name: string }) {
+  const { t } = useLanguage();
   return (
     <div className="text-center py-4">
       <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-violet-500/30">
         <Pill size={36} className="text-white" />
       </div>
       <h2 className="text-3xl font-extrabold text-slate-800 mb-3">
-        Namaste, {name?.split(' ')[0]} 🙏
+        {t('onboarding.welcomeTitle', { name: name?.split(' ')[0] })}
       </h2>
       <p className="text-slate-500 text-lg leading-relaxed mb-8 max-w-sm mx-auto">
-        Let&apos;s set up your <strong className="text-slate-700">MediSaathi</strong> profile so we can give you
-        the most personalised medication experience.
+        {t('onboarding.welcomeSubtitle')}
       </p>
       <div className="space-y-3 text-left max-w-xs mx-auto">
         {[
-          { icon: <Heart size={16} className="text-rose-500" />, text: 'Your health conditions' },
-          { icon: <Phone size={16} className="text-blue-500" />, text: 'Emergency contact details' },
-          { icon: <Users size={16} className="text-violet-500" />, text: 'Link your caregiver (optional)' },
-          { icon: <Scan size={16} className="text-emerald-500" />, text: 'Then scan your first prescription!' },
+          { icon: <Heart size={16} className="text-rose-500" />,    textKey: 'onboarding.step1Health' },
+          { icon: <Phone size={16} className="text-blue-500" />,    textKey: 'onboarding.step1Emergency' },
+          { icon: <Users size={16} className="text-violet-500" />,  textKey: 'onboarding.step1Caregiver' },
+          { icon: <Scan  size={16} className="text-emerald-500" />, textKey: 'onboarding.step1Scan' },
         ].map((item, i) => (
           <div key={i} className="flex items-center space-x-3 text-sm text-slate-600">
             <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">{item.icon}</div>
-            <span>{item.text}</span>
+            <span>{t(item.textKey as Parameters<typeof t>[0])}</span>
           </div>
         ))}
       </div>
@@ -72,19 +94,22 @@ function StepHealth({
   conditions: Condition[]; setConditions: (c: Condition[]) => void;
   language: string; setLanguage: (l: string) => void;
 }) {
-  const toggle = (name: string) => {
-    const exists = conditions.find(c => c.name === name);
-    if (exists) setConditions(conditions.filter(c => c.name !== name));
-    else setConditions([...conditions, { name, severity: 'moderate' }]);
+  const { t } = useLanguage();
+
+  // Toggle by slug — the slug is what gets stored in state (and later in DB).
+  const toggle = (slug: string) => {
+    const exists = conditions.find(c => c.name === slug);
+    if (exists) setConditions(conditions.filter(c => c.name !== slug));
+    else setConditions([...conditions, { name: slug, severity: 'moderate' }]);
   };
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-1">Health Profile</h2>
-      <p className="text-slate-500 text-sm mb-6">This helps AI personalise your reminders and insights.</p>
+      <h2 className="text-2xl font-bold text-slate-800 mb-1">{t('onboarding.healthTitle')}</h2>
+      <p className="text-slate-500 text-sm mb-6">{t('onboarding.healthSubtitle')}</p>
 
       <div className="mb-6">
-        <label className="label">Preferred Language for Reminders</label>
+        <label className="label">{t('onboarding.prefLanguage')}</label>
         <div className="grid grid-cols-3 gap-2">
           {LANGUAGES.map(l => (
             <button
@@ -104,15 +129,17 @@ function StepHealth({
       </div>
 
       <div>
-        <label className="label">Medical Conditions (select all that apply)</label>
+        <label className="label">{t('onboarding.medConditions')}</label>
         <div className="grid grid-cols-2 gap-2">
-          {CONDITIONS_LIST.map(c => {
-            const active = conditions.some(x => x.name === c);
+          {CONDITION_SLUGS.map(slug => {
+            const active = conditions.some(x => x.name === slug);
+            // Display label from translations; slug is persisted to DB.
+            const label = t(`onboarding.conditions.${slug}` as Parameters<typeof t>[0]);
             return (
               <button
-                key={c}
+                key={slug}
                 type="button"
-                onClick={() => toggle(c)}
+                onClick={() => toggle(slug)}
                 className={`flex items-center space-x-2 py-2.5 px-3 rounded-xl text-sm font-medium border transition-all text-left ${
                   active
                     ? 'bg-violet-50 border-violet-300 text-violet-700'
@@ -120,13 +147,15 @@ function StepHealth({
                 }`}
               >
                 {active ? <CheckCircle2 size={14} className="text-violet-600 shrink-0" /> : <div className="w-3.5 h-3.5 border border-slate-300 rounded-full shrink-0" />}
-                <span className="leading-tight">{c}</span>
+                <span className="leading-tight">{label}</span>
               </button>
             );
           })}
         </div>
         {conditions.length > 0 && (
-          <p className="text-xs text-violet-600 mt-2 font-medium">✓ {conditions.length} condition{conditions.length > 1 ? 's' : ''} selected</p>
+          <p className="text-xs text-violet-600 mt-2 font-medium">
+            ✓ {conditions.length} {conditions.length > 1 ? t('onboarding.conditionsSelected') : t('onboarding.conditionSelected')}
+          </p>
         )}
       </div>
     </div>
@@ -138,10 +167,11 @@ function StepEmergency({
 }: {
   contacts: Contact[]; setContacts: (c: Contact[]) => void;
 }) {
+  const { t } = useLanguage();
   const [draft, setDraft] = useState<Contact>({ name: '', phone: '', relationship: '', isPrimary: false });
 
   const add = () => {
-    if (!draft.name || !draft.phone) { toast.error('Name and phone are required'); return; }
+    if (!draft.name || !draft.phone) { toast.error(t('onboarding.namePhoneRequired')); return; }
     const updated = [...contacts, { ...draft, isPrimary: contacts.length === 0 }];
     setContacts(updated);
     setDraft({ name: '', phone: '', relationship: '', isPrimary: false });
@@ -151,8 +181,8 @@ function StepEmergency({
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-1">Emergency Contact</h2>
-      <p className="text-slate-500 text-sm mb-6">Who should we call if you miss multiple doses?</p>
+      <h2 className="text-2xl font-bold text-slate-800 mb-1">{t('onboarding.emergencyTitle')}</h2>
+      <p className="text-slate-500 text-sm mb-6">{t('onboarding.emergencySubtitle')}</p>
 
       {contacts.length > 0 && (
         <div className="space-y-2 mb-4">
@@ -160,9 +190,12 @@ function StepEmergency({
             <div key={i} className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
               <div>
                 <p className="font-semibold text-slate-800 text-sm">{c.name}
-                  {c.isPrimary && <span className="ml-2 text-xs bg-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full font-medium">Primary</span>}
+                  {c.isPrimary && <span className="ml-2 text-xs bg-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full font-medium">{t('onboarding.primary')}</span>}
                 </p>
-                <p className="text-xs text-slate-500">{c.phone} · {c.relationship}</p>
+                {/* c.relationship holds the slug; resolve display label for UI */}
+                <p className="text-xs text-slate-500">
+                  {c.phone} · {t(`onboarding.relationships.${c.relationship}` as Parameters<typeof t>[0])}
+                </p>
               </div>
               <button onClick={() => remove(i)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                 <Trash2 size={14} />
@@ -176,32 +209,37 @@ function StepEmergency({
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label text-xs">Full Name *</label>
+              <label className="label text-xs">{t('settings.fullName')} *</label>
               <input className="input text-sm" placeholder="e.g. Priya Sharma" value={draft.name}
                 onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
             </div>
             <div>
-              <label className="label text-xs">Phone *</label>
+              <label className="label text-xs">{t('settings.phone')} *</label>
               <input className="input text-sm" type="tel" placeholder="+91 98765 43210" value={draft.phone}
                 onChange={e => setDraft(d => ({ ...d, phone: e.target.value }))} />
             </div>
           </div>
           <div>
-            <label className="label text-xs">Relationship</label>
+            <label className="label text-xs">{t('onboarding.relationship')}</label>
+            {/* Value stored is the slug — persisted to DB. Display label resolved on read. */}
             <select className="input text-sm" value={draft.relationship} onChange={e => setDraft(d => ({ ...d, relationship: e.target.value }))}>
-              <option value="">Select...</option>
-              {RELATIONSHIPS.map(r => <option key={r} value={r}>{r}</option>)}
+              <option value="">{t('onboarding.selectRelationship')}</option>
+              {RELATIONSHIP_SLUGS.map(slug => (
+                <option key={slug} value={slug}>
+                  {t(`onboarding.relationships.${slug}` as Parameters<typeof t>[0])}
+                </option>
+              ))}
             </select>
           </div>
           <button onClick={add} type="button"
             className="flex items-center space-x-2 text-sm font-semibold text-violet-600 hover:text-violet-800 transition-colors">
-            <Plus size={16} /> <span>Add Contact</span>
+            <Plus size={16} /> <span>{t('onboarding.addContact')}</span>
           </button>
         </div>
       )}
 
       {contacts.length === 0 && (
-        <p className="text-xs text-slate-400 mt-3">You can also skip this and add contacts later in Settings.</p>
+        <p className="text-xs text-slate-400 mt-3">{t('onboarding.skipContactsHint')}</p>
       )}
     </div>
   );
@@ -210,15 +248,14 @@ function StepEmergency({
 function StepCaregiver({ caregiverEmail, setCaregiverEmail }: {
   caregiverEmail: string; setCaregiverEmail: (e: string) => void;
 }) {
+  const { t } = useLanguage();
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-800 mb-1">Connect a Caregiver</h2>
-      <p className="text-slate-500 text-sm mb-6">
-        A caregiver gets real-time alerts and can monitor your doses. Perfect for family members.
-      </p>
+      <h2 className="text-2xl font-bold text-slate-800 mb-1">{t('onboarding.connectCaregiver')}</h2>
+      <p className="text-slate-500 text-sm mb-6">{t('onboarding.caregiverSubtitle')}</p>
 
       <div className="mb-6">
-        <label className="label">Caregiver&apos;s Email Address</label>
+        <label className="label">{t('onboarding.caregiverEmail')}</label>
         <div className="flex space-x-2">
           <input
             className="input flex-1"
@@ -228,27 +265,20 @@ function StepCaregiver({ caregiverEmail, setCaregiverEmail }: {
             onChange={e => setCaregiverEmail(e.target.value)}
           />
         </div>
-        <p className="text-xs text-slate-400 mt-2">They&apos;ll receive an invite to create a MediSaathi caregiver account.</p>
+        <p className="text-xs text-slate-400 mt-2">{t('onboarding.caregiverInviteHint')}</p>
       </div>
 
       <div className="bg-violet-50 border border-violet-100 rounded-2xl p-5 space-y-3">
-        <p className="text-sm font-semibold text-violet-700">What your caregiver sees:</p>
-        {[
-          'Real-time dose status (taken / missed / pending)',
-          'Daily adherence score and weekly trends',
-          'Instant alert when 2+ consecutive doses are missed',
-          'Medication list and schedule',
-        ].map((t, i) => (
+        <p className="text-sm font-semibold text-violet-700">{t('onboarding.caregiverView')}</p>
+        {(t('onboarding.points') as unknown as string[]).map((point, i) => (
           <div key={i} className="flex items-start space-x-2 text-sm text-violet-600">
             <CheckCircle2 size={14} className="shrink-0 mt-0.5" />
-            <span>{t}</span>
+            <span>{point}</span>
           </div>
         ))}
       </div>
 
-      <p className="text-xs text-slate-400 mt-4 text-center">
-        You can skip this step and invite a caregiver anytime from Settings.
-      </p>
+      <p className="text-xs text-slate-400 mt-4 text-center">{t('onboarding.skipCaregiverHint')}</p>
     </div>
   );
 }
@@ -257,20 +287,22 @@ function StepCaregiver({ caregiverEmail, setCaregiverEmail }: {
 export default function OnboardingPage() {
   const router = useRouter();
   const { user, updateUser } = useAuthStore();
+  const { t } = useLanguage();
 
-  const [step, setStep]                   = useState(1);
-  const [conditions, setConditions]       = useState<Condition[]>([]);
-  const [contacts, setContacts]           = useState<Contact[]>([]);
-  const [language, setLanguage]           = useState('en');
+  const [step, setStep]                     = useState(1);
+  const [conditions, setConditions]         = useState<Condition[]>([]);
+  const [contacts, setContacts]             = useState<Contact[]>([]);
+  const [language, setLanguage]             = useState('en');
   const [caregiverEmail, setCaregiverEmail] = useState('');
-  const [saving, setSaving]               = useState(false);
+  const [saving, setSaving]                 = useState(false);
 
   const isLast = step === STEPS.length;
 
   const handleFinish = async () => {
     setSaving(true);
     try {
-      // Patch user profile with health data
+      // conditions[].name = slug (e.g. 'type2_diabetes') — slug is persisted, NOT the display label.
+      // contacts[].relationship = slug (e.g. 'parent') — slug is persisted, NOT the display label.
       const res = await api.patch('/auth/me', {
         conditions,
         emergencyContacts: contacts,
@@ -281,18 +313,17 @@ export default function OnboardingPage() {
         updateUser(res.data.user);
       }
 
-      // Invite caregiver if provided
       if (caregiverEmail.trim()) {
         try {
           await api.post('/caregiver/invite', { email: caregiverEmail });
-          toast.success('Caregiver invite sent!');
+          toast.success(t('onboarding.caregiverInviteSent'));
         } catch { /* non-blocking */ }
       }
 
-      toast.success('Profile set up! Let\'s scan your first prescription 🎉');
+      toast.success(t('onboarding.profileSetupSuccess'));
       router.push('/scan-rx');
     } catch (err: any) {
-      toast.error(err?.response?.data?.error || 'Failed to save profile');
+      toast.error(err?.response?.data?.error || t('onboarding.profileSetupFailed'));
     } finally {
       setSaving(false);
     }
@@ -322,7 +353,7 @@ export default function OnboardingPage() {
                   : 'bg-slate-100 text-slate-400'
               }`}>
                 {step > s.id ? <CheckCircle2 size={12} /> : s.icon}
-                <span className="hidden sm:inline">{s.label}</span>
+                <span className="hidden sm:inline">{t(s.labelKey as Parameters<typeof t>[0])}</span>
               </div>
               {i < STEPS.length - 1 && (
                 <div className={`w-6 h-px mx-1 transition-all ${step > s.id ? 'bg-violet-400' : 'bg-slate-200'}`} />
@@ -342,11 +373,11 @@ export default function OnboardingPage() {
           <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100">
             {step > 1 ? (
               <button onClick={() => setStep(s => s - 1)} className="flex items-center space-x-1 text-sm text-slate-500 hover:text-slate-800 transition-colors font-medium">
-                <ChevronLeft size={16} /> <span>Back</span>
+                <ChevronLeft size={16} /> <span>{t('common.back')}</span>
               </button>
             ) : (
               <button onClick={() => router.push('/dashboard')} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">
-                Skip setup
+                {t('common.skipSetup')}
               </button>
             )}
 
@@ -360,7 +391,7 @@ export default function OnboardingPage() {
                   ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   : <>
                     <Scan size={16} />
-                    <span>Scan First Prescription</span>
+                    <span>{t('onboarding.scanFirstRx')}</span>
                     <ArrowRight size={16} />
                   </>
                 }
@@ -370,7 +401,7 @@ export default function OnboardingPage() {
                 onClick={() => setStep(s => s + 1)}
                 className="flex items-center space-x-2 bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2.5 px-5 rounded-xl transition-all duration-200 hover:scale-105"
               >
-                <span>Continue</span>
+                <span>{t('common.continue')}</span>
                 <ChevronRight size={16} />
               </button>
             )}
@@ -384,7 +415,9 @@ export default function OnboardingPage() {
             style={{ width: `${(step / STEPS.length) * 100}%` }}
           />
         </div>
-        <p className="text-center text-xs text-slate-400 mt-2">Step {step} of {STEPS.length}</p>
+        <p className="text-center text-xs text-slate-400 mt-2">
+          {t('onboarding.stepOf', { step: String(step), total: String(STEPS.length) })}
+        </p>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { medicationsService } from '@/services/api';
 import { Plus, Pill, Edit2, Trash2, ToggleLeft, ToggleRight, Clock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const FREQUENCIES = ['once_daily', 'twice_daily', 'three_times_daily', 'four_times_daily', 'every_other_day', 'weekly', 'as_needed'];
 const FREQ_LABELS: Record<string, string> = {
@@ -29,6 +30,7 @@ const defaultForm = {
 
 export default function MedicationsPage() {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ ...defaultForm });
@@ -189,7 +191,11 @@ export default function MedicationsPage() {
                 <button onClick={() => openEdit(med)} className="p-2.5 rounded-xl hover:bg-secondary/10 text-muted hover:text-primary transition-colors">
                   <Edit2 size={20} />
                 </button>
-                <button onClick={() => { if (confirm(`Remove ${med.name}?`)) deleteMutation.mutate(med._id); }}
+                <button onClick={() => {
+                  // TODO: window.confirm cannot follow the app locale — a custom modal
+                  // would be the correct fix, but is intentionally deferred.
+                  if (confirm(t('medications.confirmDelete', { name: med.name }))) deleteMutation.mutate(med._id);
+                }}
                   className="p-2.5 rounded-xl hover:bg-red-50 text-muted hover:text-red-500 transition-colors">
                   <Trash2 size={20} />
                 </button>

@@ -210,7 +210,22 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => b.total - a.total);
 
-    // Call the real ML API for real-time risk assessment
+    // ── Risk level (deterministic) ─────────────────────────────────────────────
+    // Same thresholds as predict/route.ts so the two cards are always consistent.
+    // The ML prediction's riskLevel field is discarded — only riskFactors and
+    // recommendation are accepted from the model.
+    let riskLevel: string;
+    if (totalScheduled === 0) {
+      riskLevel = 'unknown'; // no scheduled doses in window — insufficient data
+    } else if (overallRate >= 80) {
+      riskLevel = 'low';
+    } else if (overallRate >= 50) {
+      riskLevel = 'medium';
+    } else {
+      riskLevel = 'high';
+    }
+
+    // Call the real ML API for contextual riskFactors / recommendation only.
     const prediction = await predictAdherenceRisk({
       userId: user.id,
       age: 45, // Demo default
@@ -225,25 +240,28 @@ export async function GET(req: NextRequest) {
       stock_days_remaining: 15, // Demo default
     });
 
-    let riskLevel = 'unknown';
     let aiInsights: string[] = [];
 
     if (prediction) {
-      riskLevel = prediction.riskLevel.toLowerCase();
-      // Map ML risk factors and recommendation to the insights list
-      aiInsights = [...prediction.riskFactors, prediction.recommendation];
+      // Accept riskFactors + recommendation from ML, but NEVER its riskLevel.
+      aiInsights = [
+        ...prediction.riskFactors,
+        // Only include the recommendation when there are real misses.
+        ...(missedDosesLast7d > 0 && prediction.recommendation ? [prediction.recommendation] : []),
+      ];
     } else {
-      // Fallback if ML API is down
-      if (overallRate >= 80) riskLevel = 'low';
-      else if (overallRate >= 50) riskLevel = 'medium';
-      else if (overallRate > 0) riskLevel = 'high';
-
-      if (riskLevel === 'low') aiInsights.push("Your adherence is excellent. Keep it up!");
-      if (riskLevel === 'medium') aiInsights.push("Consider setting an extra alarm for the afternoon doses, as those are often missed.");
-      if (riskLevel === 'high') aiInsights.push("Your recent missed doses could affect your treatment. Please talk to your caregiver.");
+      // Fallback: ML API down. Emit only actionable insights, no false praise.
+      if (riskLevel === 'medium') {
+        aiInsights.push('Consider setting an extra alarm for doses that are often missed.');
+      }
+      if (riskLevel === 'high') {
+        aiInsights.push('Your recent missed doses could affect your treatment. Please talk to your caregiver.');
+      }
+      // riskLevel === 'low' with real data: no message needed, leave aiInsights empty.
     }
 
     return NextResponse.json({
+
       adherencePercentage: overallRate,
       totalDoses: totalScheduled,
       takenDoses: totalTaken,

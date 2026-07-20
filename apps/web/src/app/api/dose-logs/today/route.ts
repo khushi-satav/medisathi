@@ -48,6 +48,23 @@ export async function GET(req: NextRequest) {
     const todayIST = getTodayIST();
     const isToday = date === todayIST;
 
+    // ── Status machine (single source of truth) ─────────────────────────────
+    //
+    //   upcoming  → scheduled time is in the future
+    //   overdue   → past scheduled time, within the 2-hour grace window
+    //               → still actionable: "Take Now" is shown
+    //   missed    → past the 2-hour grace window with no log
+    //               → no longer shown as actionable without explicit "log late"
+    //
+    // This is the ONLY place statuses are derived from time.  The stats block
+    // below and the schedule badge both read from the same `status` field —
+    // they are never computed separately.
+    //
+    // Grace period: 2 hours after scheduled time → overdue becomes missed.
+    // Rationale: enough time to take a slightly-late dose without it being
+    // counted as a failure, but short enough to trigger caregiver alerts.
+    const OVERDUE_GRACE_MS = 2 * 60 * 60 * 1000; // 2 hours
+
     const schedule = [];
 
     for (const med of medications) {
@@ -61,10 +78,13 @@ export async function GET(req: NextRequest) {
           // Use persisted status (taken, missed, skipped, snoozed, overdue)
           status = existingLog.status;
         } else if (isToday && scheduledTime < nowUTC) {
-          // Past scheduled time today without a log → overdue
-          status = 'overdue';
+          // Past scheduled time today without a log:
+          // - within 2-hour grace window  → overdue (Take Now still shown)
+          // - beyond 2-hour grace window  → missed (Take Now removed)
+          const msPastDue = nowUTC.getTime() - scheduledTime.getTime();
+          status = msPastDue <= OVERDUE_GRACE_MS ? 'overdue' : 'missed';
         } else if (!isToday && scheduledTime < nowUTC) {
-          // Past date, no log → count as missed
+          // Past date, no log → definitively missed
           status = 'missed';
         } else {
           status = 'upcoming';
@@ -96,19 +116,30 @@ export async function GET(req: NextRequest) {
     const total = schedule.length;
     const taken = schedule.filter(s => s.status === 'taken').length;
     const skipped = schedule.filter(s => s.status === 'skipped').length;
-    // Only count missed + overdue (past-due doses), NOT upcoming/snoozed
-    const missed = schedule.filter(s => s.status === 'missed' || s.status === 'overdue').length;
+    // overdue = past scheduled time, still within grace → still actionable
+    const overdue = schedule.filter(s => s.status === 'overdue').length;
+    // missed = past the grace window, no longer actionable without "log late"
+    // These are distinct from overdue and must NOT be combined in the stat card.
+    const missed = schedule.filter(s => s.status === 'missed').length;
 
-    // Adherence = taken / (doses that are definitively resolved: taken, missed, skipped)
-    // Snoozed = still pending, Upcoming = not yet due → both excluded
-    // Default 0 (not 100!) when no doses are past due yet today
-    const pastDoses = taken + missed + skipped; // only definitively-done doses
-    const adherencePct = pastDoses > 0 ? Math.round((taken / pastDoses) * 100) : 0;
+    // ── Today's adherence percentage ──────────────────────────────────────────
+    // Formula: taken / total (all doses scheduled today, regardless of status)
+    //
+    // Denominator is `total`, not `taken+missed+skipped`, so this matches the
+    // fraction shown in the hero caption ("1 / 5 doses taken").  Using a
+    // smaller denominator (past-due only) produced a different effective
+    // fraction than the text, which is the bug that caused the ring to show
+    // 50% next to "1 / 5 doses taken" (20%).
+    //
+    // Returns 0 when there are no scheduled doses (not 100).
+    const adherencePct = total > 0 ? Math.round((taken / total) * 100) : 0;
 
     return NextResponse.json({
       schedule,
       date,
-      stats: { taken, missed, total, adherencePct },
+      // overdue and missed are returned as SEPARATE fields.
+      // The client must never add them together and call it "missed".
+      stats: { taken, missed, overdue, total, adherencePct },
     });
   } catch (error: any) {
     if (error.message === 'UNAUTHORIZED')

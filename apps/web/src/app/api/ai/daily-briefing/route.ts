@@ -46,9 +46,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. Calculate Upcoming Refill Alerts
+    // 4. Fetch active medications
     const Medication = (await import('@/models/Medication')).default;
     const activeMeds = await Medication.find({ userId: user._id, isActive: true });
+
+    // BUG 2 FIX: Short-circuit when the user has no medications at all.
+    // All data fields will be zero/empty, which the LLM misreads as "perfect
+    // adherence". Return a structured signal instead — no LLM call is made.
+    if (activeMeds.length === 0) {
+      return NextResponse.json({ briefing: null, noMeds: true, interactions: [] });
+    }
+
+    // 5. Calculate Upcoming Refill Alerts
     const refillAlertsList: string[] = [];
     for (const med of activeMeds) {
       const dailyDosesCount = med.times.length || 1;
@@ -59,16 +68,39 @@ export async function POST(req: NextRequest) {
     }
     const refillAlerts = refillAlertsList.length > 0 ? refillAlertsList.join(', ') : 'None';
 
-    // 5. Gather Drug Interaction Warnings
-    const allInteractions = activeMeds.reduce((acc: string[], med) => {
+    // BUG 3 FIX: Collect interaction warnings verbatim — do NOT pass them to
+    // the LLM to rephrase.  They are returned as a structured array so the
+    // client can render them with a fixed warning template, preventing the
+    // model from softening or paraphrasing clinical safety information.
+    const interactions: string[] = activeMeds.reduce((acc: string[], med) => {
       if (med.interactions && med.interactions.length > 0) {
         acc.push(...med.interactions);
       }
       return acc;
     }, []);
-    const interactionWarnings = allInteractions.length > 0 ? allInteractions.join(', ') : 'None';
 
-    const languageNames: Record<string, string> = {
+    // ── Locale resolution ─────────────────────────────────────────────────────
+    const SUPPORTED_LANGUAGES_CODES = ['en', 'hi', 'mr', 'ta', 'te', 'bn'] as const;
+    type SupportedLang = typeof SUPPORTED_LANGUAGES_CODES[number];
+
+    // Read locale from the request body first.  This closes the race condition
+    // where a language switch has been applied on the client but the DB write
+    // hasn't committed yet.  Fall back to user.language from the DB, and
+    // ultimately to 'en' if neither is a recognised value.
+    let bodyLang: string | undefined;
+    try {
+      const body = await req.json();
+      bodyLang = body?.language;
+    } catch {
+      // No body or malformed JSON — ignore and use DB value.
+    }
+
+    const rawLang = (bodyLang ?? user.language ?? 'en') as string;
+    const targetLangCode: SupportedLang = (SUPPORTED_LANGUAGES_CODES as readonly string[]).includes(rawLang)
+      ? (rawLang as SupportedLang)
+      : 'en';
+
+    const languageNames: Record<SupportedLang, string> = {
       en: 'English',
       hi: 'Hindi',
       mr: 'Marathi',
@@ -76,29 +108,43 @@ export async function POST(req: NextRequest) {
       te: 'Telugu',
       bn: 'Bengali'
     };
-    const targetLang = languageNames[user.language as string] || 'English';
+    const targetLang = languageNames[targetLangCode];
 
+    // BUG 2 DEFENSE-IN-DEPTH: Explicit hasData flag prevents the model from
+    // conflating "user has medications but zero activity yet today" with
+    // "perfect adherence".  The model is instructed to treat them differently.
+    const hasData = dosesTotal > 0 || missedCount > 0 || streakDays > 0;
+
+    // BUG 3: Interaction warnings are intentionally omitted from the prompt.
+    // The LLM writes only non-clinical narrative sentences; warnings are
+    // returned verbatim in the `interactions` field and rendered by the client
+    // using a fixed template so the wording cannot be softened or paraphrased.
     const prompt = `
 Generate a 2-3 sentence daily medication briefing for the patient ${user.name}.
-Data: 
+Data:
+- hasData: ${hasData} (if false, the user has medications set up but no recorded activity yet — do NOT say "everything is fine" or imply good adherence)
 - Doses today: ${dosesTaken}/${dosesTotal}
 - Missed in last 7 days: ${missedCount}
 - Current streak: ${streakDays} days
 - Upcoming refill needed: ${refillAlerts}
-- Any new drug interaction flags: ${interactionWarnings}
 
-Only mention things that are actually true from this data. If nothing notable happened, say so briefly — don't pad with generic praise.
-Turn it from a summary into a nudge:
-- If a medication is running low, warn them (e.g. "Your Metformin supply runs out in X days").
-- If there are drug interactions, alert them (e.g. "You added Aspirin yesterday — this may interact with your existing Warfarin. Ask your doctor").
-- If they miss doses regularly on certain days, nudge them.
-- If everything is perfect, keep it extremely brief and encouraging.
+Rules:
+- Only mention things that are actually true from this data.
+- If hasData is false, acknowledge there is no activity recorded yet and gently encourage the user to log their first dose — do NOT praise their adherence.
+- If nothing notable happened beyond normal, keep it extremely brief.
+- Do NOT mention or describe any drug interactions — those are handled separately.
+- If a medication is running low, warn them specifically (e.g. "Your Metformin supply runs out in X days").
+- If they miss doses regularly, nudge them.
+- If everything is genuinely good (hasData is true, streak > 3, missedCount = 0), be brief and encouraging — but only if the data actually supports it.
 
-IMPORTANT: You MUST write the entire response in ${targetLang}. All text, greetings, and labels must be written in the ${targetLang} language and its native script (e.g. Devanagari script for Hindi/Marathi, Tamil script for Tamil, etc.). Do not write in transliterated/romanized format, write in the native script.`;
+IMPORTANT: You MUST write the entire response in ${targetLang}. All text must be in ${targetLang} using its native script (e.g. Devanagari for Hindi/Marathi, Tamil script for Tamil). Do not use transliterated/romanized text.`;
 
     const briefing = await generateText(prompt);
 
-    return NextResponse.json({ briefing });
+    // interactions is returned as a separate structured field.  The client
+    // renders these verbatim with a fixed warning chip — the LLM never sees
+    // or rephrases them.
+    return NextResponse.json({ briefing, noMeds: false, interactions });
   } catch (error: any) {
     console.error('Daily briefing error:', error.message);
     if (error.message === 'UNAUTHORIZED') return NextResponse.json({ error: 'Not authorized' }, { status: 401 });

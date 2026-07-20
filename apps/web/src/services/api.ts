@@ -92,8 +92,10 @@ export const aiService = {
   // Ask a medication-related question
   ask: (question: string) => api.post('/ai/ask', { question }),
 
-  // Get personalized daily medication briefing
-  getDailyBriefing: () => api.post('/ai/daily-briefing', {}),
+  // Get personalized daily medication briefing.
+  // `locale` is sent in the body so the server can use the correct language
+  // even when the DB write for a recent language switch hasn't landed yet.
+  getDailyBriefing: (locale: string) => api.post('/ai/daily-briefing', { language: locale }),
 
   // Get adherence prediction risk (ML powered)
   predict: () => api.get('/ai/predict'),
