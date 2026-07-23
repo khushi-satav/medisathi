@@ -1,0 +1,60 @@
+name: Check Missed Doses (escalation reconciliation)
+
+# Pings GET /api/cron/check-missed-doses every 5 minutes. Without this
+# running, checkAndEscalateMissedDoses()/processActiveEscalations() never
+# execute, no dose is ever marked 'missed' automatically, and the entire
+# caregiver-alert / emergency-contact escalation feature is inert — see
+# apps/web/src/app/api/cron/check-missed-doses/route.ts for what the job
+# does and why 5 minutes is the recommended interval.
+#
+# ── LEFT DISABLED ON PURPOSE ────────────────────────────────────────────
+# The `schedule` trigger below is commented out. Do not enable it until:
+#   Blocker 1 (escalation eligibility by medication type)        — DONE
+#   Blocker 2 (endDate from duration, auto-deactivation)         — DONE
+#   Blocker 2 follow-up (unsafe 'tablet' default, expanded enum) — DONE
+#   Existing-data migration (scripts/migrate-medication-forms.ts)
+#     has been run against the real database — apply this BEFORE enabling
+#     the schedule, so the cron never fires escalations off pre-fix
+#     form:'tablet' rows that may have been silently coerced from
+#     something else. See src/lib/medicationFormMigration.ts.
+#   Blocker 3 (first-run backlog: recency cutoff + per-user rate cap) — DONE
+#
+# ── TO ENABLE ────────────────────────────────────────────────────────────
+#   1. Confirm the migration above has been run with --apply against the
+#      real database (not just dry-run) and you've reviewed its output.
+#   2. In the GitHub repo settings, add these Actions secrets:
+#        APP_BASE_URL  — e.g. https://your-deployed-app.netlify.app
+#        CRON_SECRET   — must match CRON_SECRET in the deployed app's env
+#   3. Uncomment the `schedule:` block below.
+#   4. Commit. GitHub Actions cron schedules can drift by a few minutes
+#      under load — that's fine here, checkAndEscalateMissedDoses() already
+#      tolerates up to a 24h detection window and Blocker 3's recency
+#      cutoff bounds the consequence of any single delayed run.
+#
+# You can also just click "Run workflow" below any time to trigger it
+# manually (e.g. to test end-to-end) without enabling the schedule.
+
+on:
+  workflow_dispatch: {}
+  # schedule:
+  #   - cron: '*/5 * * * *'
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call check-missed-doses cron endpoint
+        run: |
+          if [ -z "${{ secrets.APP_BASE_URL }}" ] || [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "APP_BASE_URL and/or CRON_SECRET secrets are not set. Configure them in repo Settings > Secrets and variables > Actions before relying on this workflow." >&2
+            exit 1
+          fi
+          http_status=$(curl -s -o response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_BASE_URL }}/api/cron/check-missed-doses")
+          echo "HTTP status: $http_status"
+          cat response.json
+          if [ "$http_status" -ge 300 ]; then
+            echo "Non-success response from check-missed-doses" >&2
+            exit 1
+          fi

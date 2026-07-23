@@ -120,12 +120,14 @@ CRITICAL RULES:
    - "empty stomach" / "fasting" → "empty_stomach"
    - "any time" / "anytime" / not specified → "any_time"
 
-3. FORM — Map to one of: tablet | capsule | syrup | injection | drops | cream | ointment | powder | inhaler | gel | suspension | liquid
+3. FORM — Map to EXACTLY one of these values only: tablet | capsule | liquid | syrup | suspension | injection | inhaler | drops | patch | powder | cream | ointment | gel | lotion | soap | sunscreen | shampoo | other
+   - If the product is a topical/dermatological item not clearly one of the specific topical forms above (e.g. a face wash, a moisturiser, a scrub), still pick the closest match (soap/cream/lotion) rather than leaving it blank.
+   - If you genuinely cannot tell which of these forms applies, use "other". Do NOT default to "tablet" for anything you are not confident is an oral/systemic medication — a wrong "tablet" guess causes this app to send phone calls and emergency-contact alerts for a missed dose, so an honest "other" is always safer than a confident-sounding wrong guess.
 
 4. QUANTITY — Calculate automatically:
    - quantity = (number of times per day) x (duration in days)
    - Example: "twice daily for 5 days" → quantity = 2 x 5 = 10
-   - If duration not mentioned, assume 30 days
+   - If duration is not mentioned on the prescription, assume 30 days ONLY for this quantity calculation — do NOT write "30 days" into the "duration" output field itself in that case. Leave "duration" as an empty string "" if it is not actually stated, so the app knows to ask the user to confirm the course length rather than silently trusting a guess.
    - For liquid/syrup, quantity = total ml
 
 5. SPELLING — Auto-correct common medicine name errors (e.g. "Azithrmycin" → "Azithromycin")

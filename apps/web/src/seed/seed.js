@@ -48,7 +48,12 @@ const MedicationSchema = new Schema({
   name: { type: String, required: true },
   genericName: String,
   dosage: { type: String, required: true },
-  form: { type: String, enum: ['tablet','capsule','liquid','injection','drops','patch','inhaler','cream','other'], default: 'tablet' },
+  // Keep in sync with MEDICATION_FORMS in src/lib/escalationClassification.ts —
+  // this file is run as plain Node (node src/seed/seed.js per README) and
+  // can't import that .ts module directly. Default is 'other', not
+  // 'tablet': an undetermined form must fail toward the least aggressive
+  // escalation level, not the most (see escalationClassification.ts).
+  form: { type: String, enum: ['tablet','capsule','liquid','syrup','suspension','injection','inhaler','drops','patch','powder','cream','ointment','gel','lotion','soap','sunscreen','shampoo','other'], default: 'other' },
   condition: String,
   color: { type: String, default: '#6C63FF' },
   times: [String],

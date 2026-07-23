@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import Medication from '@/models/Medication';
 import User from '@/models/User';
@@ -8,14 +8,24 @@ import { getSmsTemplates } from '@/lib/smsTemplates';
 
 /**
  * GET /api/cron/check-refills
- * Called daily by Vercel Cron or an external scheduler.
- * Optionally add a security token check:
- *   if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
- *     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
- *   }
+ * Called daily by an external scheduler.
+ * Call with: Authorization: Bearer <CRON_SECRET> (same env var and pattern
+ * as /api/cron/check-missed-doses). This was previously an unauthenticated
+ * public endpoint that triggers real Twilio SMS sends to patients and
+ * their emergency contacts — anyone who found the URL could spam it.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const cronSecret = process.env.CRON_SECRET;
+    if (cronSecret) {
+      const authHeader = req.headers.get('authorization');
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    } else {
+      console.warn('[check-refills cron] CRON_SECRET is not set — this endpoint is running unauthenticated.');
+    }
+
     await connectDB();
 
     const medications = await Medication.find({ isActive: true }).populate('userId');

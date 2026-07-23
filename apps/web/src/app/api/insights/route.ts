@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
-import AdherenceStats from '@/models/AdherenceStats';
 import DoseLog from '@/models/DoseLog';
 import Medication from '@/models/Medication';
 import { requireAuth } from '@/lib/auth';
 import { predictAdherenceRisk } from '@/lib/mlClient';
+import { getAdherenceWindow } from '@/services/adherenceWindow';
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,71 +14,23 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const days = parseInt(searchParams.get('days') || '30');
 
-    // Last N days
-    const endDate = new Date();
+    const {
+      stats,
+      allMeds,
+      startStr,
+      endStr,
+      dailyScheduled,
+      medScheduledMap,
+      totalScheduled,
+      totalTaken,
+      totalSkipped,
+      totalMissed,
+      overallRate,
+    } = await getAdherenceWindow(user.id, days);
+
+    const now = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
-
-    const startStr = startDate.toISOString().split('T')[0];
-    const endStr = endDate.toISOString().split('T')[0];
-
-    const stats = await AdherenceStats.find({
-      userId: user.id,
-      date: { $gte: startStr, $lte: endStr },
-    }).sort({ date: 1 });
-
-    const allMeds = await Medication.find({ userId: user.id });
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-
-    const dailyScheduled: Record<string, number> = {};
-    const medScheduledMap: Record<string, number> = {};
-    let totalScheduled = 0;
-    for (let i = 0; i <= days; i++) {
-      const d = new Date(startDate);
-      d.setDate(d.getDate() + i);
-      const dStr = d.toISOString().split('T')[0];
-      
-      if (dStr > endStr) continue;
-      dailyScheduled[dStr] = 0;
-
-      for (const med of allMeds) {
-        if (!med.startDate) continue;
-        const medStartStr = new Date(med.startDate).toISOString().split('T')[0];
-        const medIdStr = med._id.toString();
-        if (!medScheduledMap[medIdStr]) medScheduledMap[medIdStr] = 0;
-
-        if (medStartStr <= dStr && med.isActive) {
-          if (dStr === todayStr) {
-            for (const t of med.times) {
-              const [h, m] = t.split(':').map(Number);
-              const schedTime = new Date(dStr);
-              schedTime.setHours(h, m, 0, 0);
-              if (schedTime <= now) {
-                dailyScheduled[dStr]++;
-                totalScheduled++;
-                medScheduledMap[medIdStr]++;
-              }
-            }
-          } else {
-            dailyScheduled[dStr] += med.times.length;
-            totalScheduled += med.times.length;
-            medScheduledMap[medIdStr] += med.times.length;
-          }
-        }
-      }
-    }
-
-    const totalTaken = stats.reduce((s, d) => s + d.takenDoses, 0);
-    const totalSkipped = stats.reduce((s, d) => s + d.skippedDoses, 0);
-    const explicitMissed = stats.reduce((s, d) => s + d.missedDoses, 0);
-
-    const calculatedMissed = totalScheduled - totalTaken - totalSkipped;
-    const totalMissed = Math.max(explicitMissed, calculatedMissed > 0 ? calculatedMissed : 0);
-
-    totalScheduled = Math.max(totalScheduled, totalTaken + totalMissed + totalSkipped);
-
-    const overallRate = totalScheduled > 0 ? Math.round((totalTaken / totalScheduled) * 100) : 0;
 
     // Map stats by date
     const statsByDate: Record<string, any> = {};

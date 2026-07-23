@@ -6,6 +6,7 @@ import { medicationsService } from '@/services/api';
 import { Plus, Pill, Edit2, Trash2, ToggleLeft, ToggleRight, Clock, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { MEDICATION_FORMS } from '@/lib/escalationClassification';
 
 const FREQUENCIES = ['once_daily', 'twice_daily', 'three_times_daily', 'four_times_daily', 'every_other_day', 'weekly', 'as_needed'];
 const FREQ_LABELS: Record<string, string> = {
@@ -17,13 +18,22 @@ const FOOD_LABELS: Record<string, string> = {
   before_meal: 'Before meal', after_meal: 'After meal', with_meal: 'With meal',
   empty_stomach: 'Empty stomach', any_time: 'Anytime',
 };
-const MED_TYPES = ['tablet', 'capsule', 'syrup', 'injection', 'drops', 'inhaler', 'patch', 'cream', 'other'];
+// Single source of truth (escalationClassification.ts) — was previously a
+// separate hardcoded list here that had drifted out of sync with the
+// Mongoose schema enum (missing syrup, ointment, gel, lotion, powder,
+// suspension, soap, sunscreen, shampoo).
+const MED_TYPES: readonly string[] = MEDICATION_FORMS;
 const COLOR_PILL: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-700', inactive: 'bg-border text-muted',
 };
 
 const defaultForm = {
-  name: '', genericName: '', type: 'tablet', dosage: '', frequency: 'once_daily',
+  // No pre-selected type: a user in a hurry who never touches the dropdown
+  // must not be able to submit a cream/gel/lotion as an unreviewed
+  // "tablet" default — that silently buys it full escalation (voice calls,
+  // emergency-contact alerts) for a missed moisturiser. Forcing an explicit
+  // choice costs one tap; see escalationClassification.ts.
+  name: '', genericName: '', type: '', dosage: '', frequency: 'once_daily',
   scheduledTimes: ['08:00'], foodInstruction: 'any_time', startDate: '', endDate: '',
   totalQuantity: '', refillAt: '', notes: '',
 };
@@ -92,6 +102,7 @@ export default function MedicationsPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name || !form.dosage) { toast.error('Name and dosage are required'); return; }
+    if (!form.type) { toast.error('Please select a medication type'); return; }
     saveMutation.mutate({
       ...form,
       stockCount: form.totalQuantity ? parseInt(form.totalQuantity) : undefined,
@@ -227,8 +238,9 @@ export default function MedicationsPage() {
                   <input className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" placeholder="e.g. Metformin HCl" value={form.genericName} onChange={e => upF('genericName', e.target.value)} />
                 </div>
                 <div>
-                  <label className="label text-foreground font-semibold mb-1.5 block">Type</label>
-                  <select className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" value={form.type} onChange={e => upF('type', e.target.value)}>
+                  <label className="label text-foreground font-semibold mb-1.5 block">Type *</label>
+                  <select required className="input w-full bg-background border-border focus:border-primary focus:ring-primary/20 rounded-2xl px-4 py-3" value={form.type} onChange={e => upF('type', e.target.value)}>
+                    <option value="" disabled>Select form...</option>
                     {MED_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
                   </select>
                 </div>

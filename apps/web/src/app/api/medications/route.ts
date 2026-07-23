@@ -3,6 +3,7 @@ import connectDB from '@/lib/mongoose';
 import Medication from '@/models/Medication';
 import DoseLog from '@/models/DoseLog';
 import { requireAuth } from '@/lib/auth';
+import { deriveDefaultEscalationLevel, needsEscalationLevelConfirmation, resolveMedicationForm, EscalationLevel } from '@/lib/escalationClassification';
 
 export async function GET(req: NextRequest) {
   try {
@@ -53,6 +54,12 @@ export async function POST(req: NextRequest) {
       startDate, endDate, stockCount, refillAlertDays, condition,
       color, isOngoing, specialInstructions, genericName,
       daysSupply, refillThreshold,
+      // Optional explicit override — when omitted, escalationLevel is
+      // derived from `form` (see escalationClassification.ts). This is the
+      // per-medication configurability hook a future settings UI can use to
+      // e.g. upgrade a specific "ambiguous" drops/patch entry to 'full', or
+      // downgrade a med the patient doesn't want escalated.
+      escalationLevel,
     } = body;
 
     if (!name || !dosage || !startDate) {
@@ -84,9 +91,10 @@ export async function POST(req: NextRequest) {
       // Also update daysSupply with new additional stock
       existingMed.daysSupply = Math.max(0, existingMed.daysSupply || 0) + (daysSupply !== undefined ? Number(daysSupply) : additionalStock);
       
-      // Update fields with manually input values
+      // Update fields with manually input values. Undetermined/omitted form
+      // -> 'other' (least aggressive), never 'tablet'.
       existingMed.dosage = dosage;
-      existingMed.form = form || 'tablet';
+      existingMed.form = resolveMedicationForm(form);
       existingMed.foodInstruction = foodInstruction || 'after_meal';
       existingMed.startDate = new Date(startDate);
       existingMed.endDate = endDate ? new Date(endDate) : undefined;
@@ -99,18 +107,30 @@ export async function POST(req: NextRequest) {
       if (condition !== undefined) existingMed.condition = condition;
       if (color !== undefined) existingMed.color = color;
       if (specialInstructions !== undefined) existingMed.specialInstructions = specialInstructions;
-      
+
+      // Respect an explicit override; otherwise backfill classification for
+      // medications that predate this field — the pre-save hook only
+      // auto-classifies brand-new documents, not updates.
+      if (escalationLevel) {
+        existingMed.escalationLevel = escalationLevel as EscalationLevel;
+      } else if (!existingMed.escalationLevel) {
+        existingMed.escalationLevel = deriveDefaultEscalationLevel(existingMed.form);
+        existingMed.needsEscalationLevelConfirmation = needsEscalationLevelConfirmation(existingMed.form);
+      }
+
       existingMed.updatedAt = new Date();
       await existingMed.save();
       medication = existingMed;
     } else {
-      // Create new medication
+      // Create new medication. escalationLevel: if the caller passed an
+      // explicit value, use it; otherwise leave it unset so the Medication
+      // pre-save hook derives it from `form`.
       medication = await Medication.create({
         userId: user.id,
         name: cleanName,
         genericName,
         dosage,
-        form: form || 'tablet',
+        form: resolveMedicationForm(form),
         times: times || ['08:00'],
         foodInstruction: foodInstruction || 'after_meal',
         startDate: new Date(startDate),
@@ -123,6 +143,7 @@ export async function POST(req: NextRequest) {
         color: color || '#6C63FF',
         isOngoing: isOngoing !== false,
         specialInstructions,
+        ...(escalationLevel ? { escalationLevel } : {}),
       });
     }
 

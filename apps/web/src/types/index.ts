@@ -1,4 +1,5 @@
 // MediSaathi Core Types
+import type { MedicationForm } from '@/lib/escalationClassification';
 
 export interface User {
   id: string;
@@ -48,7 +49,7 @@ export interface Medication {
   name: string;
   genericName?: string;
   dosage: string;
-  form: 'tablet' | 'capsule' | 'liquid' | 'injection' | 'drops' | 'patch' | 'inhaler' | 'cream' | 'other';
+  form: MedicationForm;
   condition?: string;
   color: string;
   times: string[];

@@ -5,8 +5,66 @@ import Medication from '@/models/Medication';
 import DoseLog from '@/models/DoseLog';
 import AdherenceStats from '@/models/AdherenceStats';
 import EscalationState from '@/models/EscalationState';
+import CronRunLog from '@/models/CronRunLog';
 import { sendPushNotification, sendSMS, makePhoneCall } from '@/lib/notificationHelper';
+import { getEffectiveEscalationLevel } from '@/lib/escalationClassification';
 
+// ── First-run / backlog safety ──────────────────────────────────────────────
+// checkAndEscalateMissedDoses() looks back up to 24h. Its first-ever
+// execution against real data (or any run after a cron outage) can detect a
+// large number of unlogged overdue doses in one pass. Two independent
+// protections, both always active (not just when a backlog is detected —
+// the danger below exists for a single stale miss too, not only bulk ones):
+//
+//   1. RECENCY CUTOFF — an escalation is only ever STARTED for a dose that
+//      became due within the last ESCALATION_RECENCY_CUTOFF_MINUTES. A dose
+//      already older than that still gets its DoseLog + AdherenceStats
+//      recalculated (adherence accuracy is unaffected), it just never
+//      starts a notification chain. Why this matters even for a single
+//      stale miss, not just bulk backfills: createEscalation() always fires
+//      t0 immediately, but processActiveEscalations() computes elapsed time
+//      from the ORIGINAL scheduled time, not from when the escalation was
+//      created — so an escalation started for a dose that's already, say,
+//      70 minutes overdue would jump straight to firing t60 (caregiver
+//      alert) on the very next cron tick, having skipped t15/t30 entirely.
+//      15 minutes keeps that from ever happening: under normal 5-minute
+//      cron cadence a fresh miss is always detected within ~5-10 minutes of
+//      becoming overdue, well inside the cutoff, so this never affects
+//      steady-state operation — it only suppresses escalation-starting for
+//      genuinely stale detections (first run, or a cron gap).
+//   2. PER-USER RATE CAP — even within the recency window, no single user
+//      can have more than ESCALATION_RATE_CAP_PER_USER escalations started
+//      against them in one run (e.g. several medications all scheduled in
+//      the same 15-minute window). Doses beyond the cap still get their
+//      DoseLog recorded; they just don't also start a notification chain in
+//      this run — a future dose for that same medication will escalate
+//      normally next time it's missed.
+//
+// isFirstRun / isLargeBacklog below are informational signals only (surfaced
+// in the run log so you can see when a run looks like a catch-up), not
+// separate gates — the two protections above apply on every run.
+const ESCALATION_RECENCY_CUTOFF_MINUTES = 15;
+const ESCALATION_RATE_CAP_PER_USER = 3;
+const LARGE_BACKLOG_THRESHOLD = 10;
+
+/**
+ * Starts (or returns the existing) escalation for a missed dose.
+ *
+ * The escalation level is resolved HERE, once, from the medication's
+ * effective classification (see escalationClassification.ts) and snapshotted
+ * onto the EscalationState document — every later step reads the snapshot,
+ * not the live medication, so changing a medication's configured level
+ * mid-flight can't alter an escalation already in progress.
+ *
+ *   'none'          — no EscalationState is created at all. The missed dose
+ *                      is still logged (adherence tracking unaffected); it
+ *                      just never becomes a push/SMS/call/caregiver/emergency
+ *                      chain. Returns null.
+ *   'reminder_only' — t0 push fires, then the escalation is immediately
+ *                      capped (status 'capped') so it can never progress to
+ *                      t15+.
+ *   'full'          — unchanged: complete t0..t120 chain.
+ */
 export async function createEscalation(
   patientId: string,
   medicationId: string,
@@ -15,26 +73,59 @@ export async function createEscalation(
 ) {
   await connectDB();
 
-  // If there's already an active escalation for this dose, don't duplicate it
+  // If there's already an escalation for this dose, don't duplicate it.
+  // This check is an optimization, not the guarantee — the unique index on
+  // EscalationState.doseLogId is the real guarantee. Two concurrent callers
+  // (e.g. overlapping cron runs) can both pass this check; only one of the
+  // create() calls below will actually succeed.
   const existing = await EscalationState.findOne({ doseLogId });
   if (existing) {
     return existing;
   }
 
-  const escalation = await EscalationState.create({
-    userId: patientId,
-    medicationId,
-    doseLogId,
-    status: 'active',
-    missedAt: scheduledTime,
-    currentStep: 't0',
-    stepsSent: [],
-  });
+  const medication = await Medication.findById(medicationId);
+  const escalationLevel = getEffectiveEscalationLevel(medication ?? {});
 
-  console.log(`Created escalation for patient ${patientId}, doseLog ${doseLogId}`);
+  if (escalationLevel === 'none') {
+    console.log(`Escalation skipped for doseLog ${doseLogId}: medication ${medicationId} is configured 'none' — dose stays logged as missed, no notifications sent.`);
+    return null;
+  }
 
-  // Run T+0 step immediately
+  let escalation;
+  try {
+    escalation = await EscalationState.create({
+      userId: patientId,
+      medicationId,
+      doseLogId,
+      status: 'active',
+      missedAt: scheduledTime,
+      currentStep: 't0',
+      stepsSent: [],
+      escalationLevel,
+    });
+  } catch (err: any) {
+    if (err?.code === 11000) {
+      // Lost the race to another concurrent caller — it already created (and
+      // is firing t0 for) this escalation. Return that one; do NOT fire t0
+      // again here, or the patient gets a duplicate push notification.
+      const winner = await EscalationState.findOne({ doseLogId });
+      if (winner) return winner;
+    }
+    throw err;
+  }
+
+  console.log(`Created escalation (level=${escalationLevel}) for patient ${patientId}, doseLog ${doseLogId}`);
+
+  // Run T+0 step immediately. executeEscalationStep() atomically claims the
+  // step before sending, so even this first call is idempotent.
   await executeEscalationStep(escalation, 't0');
+
+  if (escalationLevel !== 'full') {
+    // By design, not by failure — distinct from 'resolved' (patient
+    // responded) and 'failed' (chain exhausted without response).
+    await EscalationState.findByIdAndUpdate(escalation._id, { status: 'capped' });
+    console.log(`Escalation ${escalation._id} capped after t0 (level=${escalationLevel}) — will not progress to t15+.`);
+  }
 
   return escalation;
 }
@@ -58,6 +149,8 @@ export async function processActiveEscalations() {
   console.log(`Processing ${activeEscalations.length} active escalations...`);
 
   const now = new Date();
+  let stepsSent = 0;
+  let errors = 0;
 
   for (const esc of activeEscalations) {
     try {
@@ -66,20 +159,29 @@ export async function processActiveEscalations() {
 
       console.log(`Escalation ${esc._id}: ${elapsedMinutes} minutes elapsed since dose time.`);
 
-      // Check steps sequentially and trigger if appropriate
+      // Check steps sequentially and trigger the latest one due. The
+      // stepsSent.includes() checks here are a cheap pre-filter only — the
+      // real idempotency guarantee is the atomic claim inside
+      // executeEscalationStep(), which is safe even if two runs of this
+      // loop overlap for the same escalation.
+      let result: { sent: boolean } | null = null;
       if (elapsedMinutes >= 120 && !esc.stepsSent.includes('t120')) {
-        await executeEscalationStep(esc, 't120');
+        result = await executeEscalationStep(esc, 't120');
       } else if (elapsedMinutes >= 60 && !esc.stepsSent.includes('t60')) {
-        await executeEscalationStep(esc, 't60');
+        result = await executeEscalationStep(esc, 't60');
       } else if (elapsedMinutes >= 30 && !esc.stepsSent.includes('t30')) {
-        await executeEscalationStep(esc, 't30');
+        result = await executeEscalationStep(esc, 't30');
       } else if (elapsedMinutes >= 15 && !esc.stepsSent.includes('t15')) {
-        await executeEscalationStep(esc, 't15');
+        result = await executeEscalationStep(esc, 't15');
       }
+      if (result?.sent) stepsSent++;
     } catch (err) {
+      errors++;
       console.error(`Error processing escalation ${esc._id}:`, err);
     }
   }
+
+  return { activeEscalations: activeEscalations.length, stepsSent, errors };
 }
 
 const ESCALATION_TRANSLATIONS: Record<string, {
@@ -154,13 +256,48 @@ const ESCALATION_TRANSLATIONS: Record<string, {
   }
 };
 
-export async function executeEscalationStep(escalation: any, step: 't0' | 't15' | 't30' | 't60' | 't120') {
+const NEXT_STEP: Record<string, string> = {
+  t0: 't15',
+  t15: 't30',
+  t30: 't60',
+  t60: 't120',
+  t120: 'done',
+};
+
+/**
+ * Sends the notification for one escalation step.
+ *
+ * Idempotency guard: the step is atomically CLAIMED (via a single
+ * findOneAndUpdate that only matches if the step is not already in
+ * stepsSent AND the escalation is still 'active') BEFORE any notification
+ * is sent. If the claim matches nothing — because another overlapping run
+ * already claimed this step, or the escalation was resolved in the
+ * meantime by the patient logging the dose — we skip sending entirely.
+ * This replaces the previous "send, then record" order, which had a race:
+ * two overlapping cron runs could both read stepsSent without the step,
+ * both send the SMS/call, and only then both write — i.e. a duplicate
+ * alert. Claim-then-send makes the write the exclusive gate on the send.
+ */
+export async function executeEscalationStep(escalation: any, step: 't0' | 't15' | 't30' | 't60' | 't120'): Promise<{ sent: boolean; reason?: string }> {
+  await connectDB();
+
+  const claimed = await EscalationState.findOneAndUpdate(
+    { _id: escalation._id, status: 'active', stepsSent: { $ne: step } },
+    { $addToSet: { stepsSent: step }, $set: { currentStep: NEXT_STEP[step] } },
+    { returnDocument: 'after' }
+  );
+
+  if (!claimed) {
+    console.log(`Escalation ${escalation._id}: step ${step} already sent or no longer active — skipping.`);
+    return { sent: false, reason: 'already-claimed-or-inactive' };
+  }
+
   const patient = await User.findById(escalation.userId);
   const medication = await Medication.findById(escalation.medicationId);
 
   if (!patient || !medication) {
     console.error(`Patient or Medication not found for escalation: ${escalation._id}`);
-    return;
+    return { sent: false, reason: 'patient-or-medication-missing' };
   }
 
   const formattedTime = escalation.missedAt.toLocaleTimeString('en-US', {
@@ -253,30 +390,84 @@ export async function executeEscalationStep(escalation: any, step: 't0' | 't15' 
       }
     }
 
-    // Update steps sent in database
-    escalation.stepsSent.push(step);
-    if (step === 't0') escalation.currentStep = 't15';
-    else if (step === 't15') escalation.currentStep = 't30';
-    else if (step === 't30') escalation.currentStep = 't60';
-    else if (step === 't60') escalation.currentStep = 't120';
-    else if (step === 't120') {
-      escalation.currentStep = 'done';
-      escalation.status = 'failed'; // Finished all escalations without response
+    // step + currentStep were already committed atomically by the claim
+    // above. t120 additionally ends the escalation — no further steps
+    // exist, so mark it terminal here.
+    if (step === 't120') {
+      await EscalationState.findByIdAndUpdate(claimed._id, { status: 'failed' });
     }
 
-    await escalation.save();
     console.log(`Successfully completed step ${step} for escalation ${escalation._id}`);
+    return { sent: true };
   } catch (error) {
     console.error(`Error executing step ${step} for escalation ${escalation._id}:`, error);
+    // The claim above already recorded this step as sent so a concurrent
+    // run couldn't double-send while this one was in flight. Since the send
+    // actually failed, release the claim so the NEXT run retries it instead
+    // of silently skipping this step forever.
+    await EscalationState.findByIdAndUpdate(claimed._id, {
+      $pull: { stepsSent: step },
+      $set: { currentStep: step },
+    });
+    return { sent: false, reason: 'send-error' };
   }
+}
+
+/**
+ * A medication with an endDate lingers `isActive: true` forever once its
+ * course ends — nothing else in the app flips it. The only existing write
+ * to isActive: false is the user-initiated DELETE endpoint
+ * (medications/[id]/route.ts). Without this, a lapsed "10 days" antibiotic
+ * course would keep generating 'missed' DoseLogs and (pre-classification)
+ * escalation chains indefinitely after the patient finished the course.
+ *
+ * A medication stays scheduled THROUGH its endDate (see getAdherenceWindow),
+ * so it's only deactivated once that calendar day has fully passed.
+ */
+export async function deactivateExpiredMedications(): Promise<number> {
+  await connectDB();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const candidates = await Medication.find({
+    isActive: true,
+    endDate: { $exists: true, $ne: null },
+  });
+
+  const expiredIds = candidates
+    .filter((med) => new Date(med.endDate!).toISOString().split('T')[0] < todayStr)
+    .map((med) => med._id);
+
+  if (expiredIds.length === 0) return 0;
+
+  await Medication.updateMany({ _id: { $in: expiredIds } }, { isActive: false });
+  console.log(`Deactivated ${expiredIds.length} medication(s) whose endDate has passed: ${expiredIds.join(', ')}`);
+  return expiredIds.length;
 }
 
 export async function checkAndEscalateMissedDoses() {
   await connectDB();
+
+  const deactivatedCount = await deactivateExpiredMedications();
+
+  // Informational only — see the comment above these constants. Checked
+  // before the run so "first run" reflects whether this job has EVER
+  // completed before, not whether it happens to find anything this time.
+  const priorRunCount = await CronRunLog.countDocuments({ jobName: 'check-missed-doses' });
+  const isFirstRun = priorRunCount === 0;
+
   const medications = await Medication.find({ isActive: true });
   const now = new Date();
 
-  console.log(`Checking missed doses for ${medications.length} active medications...`);
+  console.log(`Checking missed doses for ${medications.length} active medications...${isFirstRun ? ' (first-ever run of this job)' : ''}`);
+
+  let missedDetected = 0;
+  let escalationsStarted = 0;
+  let escalationsSkippedStale = 0;
+  let escalationsRateLimited = 0;
+  let errors = 0;
+  // Per-user escalation-start count for THIS run only (in-memory, not
+  // persisted — resets every invocation by design).
+  const escalationsStartedByUser = new Map<string, number>();
 
   for (const med of medications) {
     try {
@@ -312,30 +503,92 @@ export async function checkAndEscalateMissedDoses() {
               });
 
               if (!existingLog) {
-                console.log(`Dose missed detected: Patient ${patient.name}, Med: ${med.name} at ${scheduledTime.toISOString()}`);
-                // Create dose log
-                const log = await DoseLog.create({
-                  userId: patient._id,
-                  medicationId: med._id,
-                  scheduledDate: dateString,
-                  scheduledTime,
-                  status: 'missed',
-                });
+                // Create dose log. The unique index on
+                // {medicationId, scheduledDate, scheduledTime} is the real
+                // idempotency guarantee here — this create() can race with
+                // another overlapping run past the existingLog check above;
+                // if so, Mongo rejects the second insert with E11000 and we
+                // just treat it as "someone else already handled this dose".
+                let log;
+                try {
+                  log = await DoseLog.create({
+                    userId: patient._id,
+                    medicationId: med._id,
+                    scheduledDate: dateString,
+                    scheduledTime,
+                    status: 'missed',
+                  });
+                } catch (createErr: any) {
+                  if (createErr?.code === 11000) {
+                    console.log(`Missed-dose log for med ${med._id} at ${scheduledTime.toISOString()} was already created by a concurrent run — skipping.`);
+                    continue;
+                  }
+                  throw createErr;
+                }
 
-                // Recalculate stats for patient on that date
+                console.log(`Dose missed detected: Patient ${patient.name}, Med: ${med.name} at ${scheduledTime.toISOString()}`);
+                missedDetected++;
+
+                // Recalculate stats for patient on that date. This ALWAYS
+                // happens regardless of the recency/rate guards below —
+                // adherence accuracy for a stale or rate-limited miss is not
+                // in question, only whether it also starts a notification
+                // chain.
                 await recalculateStats(patient._id.toString(), dateString);
 
-                // Start escalation
-                await createEscalation(patient._id.toString(), med._id.toString(), log._id.toString(), scheduledTime);
+                // ── Recency cutoff (see comment near the constants above) ──
+                const staleMinutes = (now.getTime() - scheduledTime.getTime()) / 60000;
+                if (staleMinutes > ESCALATION_RECENCY_CUTOFF_MINUTES) {
+                  escalationsSkippedStale++;
+                  console.log(`Escalation NOT started for ${med.name} (${patient.name}): dose is ${Math.round(staleMinutes)}min stale, past the ${ESCALATION_RECENCY_CUTOFF_MINUTES}min recency cutoff. Logged as missed only.`);
+                  continue;
+                }
+
+                // ── Per-user rate cap (see comment near the constants above) ──
+                const userKey = patient._id.toString();
+                const startedForUser = escalationsStartedByUser.get(userKey) ?? 0;
+                if (startedForUser >= ESCALATION_RATE_CAP_PER_USER) {
+                  escalationsRateLimited++;
+                  console.log(`Escalation NOT started for ${med.name} (${patient.name}): user already hit the ${ESCALATION_RATE_CAP_PER_USER}-per-run cap. Logged as missed only.`);
+                  continue;
+                }
+
+                // Start escalation (idempotent — see createEscalation). Returns
+                // null for escalationLevel 'none' (e.g. topicals) — the missed
+                // dose above is still logged for adherence, it just doesn't
+                // start a notification chain.
+                const escalation = await createEscalation(patient._id.toString(), med._id.toString(), log._id.toString(), scheduledTime);
+                if (escalation) {
+                  escalationsStarted++;
+                  escalationsStartedByUser.set(userKey, startedForUser + 1);
+                }
               }
             }
           }
         }
       }
     } catch (err) {
+      errors++;
       console.error(`Error checking missed doses for medication ${med._id}:`, err);
     }
   }
+
+  const isLargeBacklog = missedDetected > LARGE_BACKLOG_THRESHOLD;
+  if (isFirstRun || isLargeBacklog) {
+    console.log(`This run looks like a backfill/catch-up (isFirstRun=${isFirstRun}, missedDetected=${missedDetected} > threshold=${LARGE_BACKLOG_THRESHOLD}=${isLargeBacklog}). Recency cutoff and per-user rate cap applied as always — ${escalationsSkippedStale} escalation(s) skipped as stale, ${escalationsRateLimited} skipped by the rate cap.`);
+  }
+
+  return {
+    medicationsChecked: medications.length,
+    missedDetected,
+    escalationsStarted,
+    escalationsSkippedStale,
+    escalationsRateLimited,
+    isFirstRun,
+    isLargeBacklog,
+    errors,
+    deactivatedCount,
+  };
 }
 
 const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;

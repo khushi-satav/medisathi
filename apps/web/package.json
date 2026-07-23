@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:escalation": "tsx test_escalation.ts"
+    "test:escalation": "tsx test_escalation.ts",
+    "migrate:medication-forms": "tsx scripts/migrate-medication-forms.ts"
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^6.4.1",

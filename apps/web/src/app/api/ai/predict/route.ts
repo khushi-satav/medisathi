@@ -2,25 +2,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/mongoose';
 import DoseLog from '@/models/DoseLog';
 import Medication from '@/models/Medication';
-import AdherenceStats from '@/models/AdherenceStats';
 import { requireAuth } from '@/lib/auth';
 import User from '@/models/User';
 import { differenceInDays } from 'date-fns';
+import { getAdherenceWindow } from '@/services/adherenceWindow';
 
 // ── Deterministic risk thresholds ─────────────────────────────────────────────
 // Risk level is computed from the 7-day ADHERENCE PERCENTAGE, not from the
-// raw DoseLog 'missed' count.  The count approach undercounted because
-// in-flight 'overdue' doses are not persisted to DoseLog until background
-// jobs run — so a user with 4 overdue doses at 9 PM could still show 0
-// persisted missed records, giving a false LOW.
+// raw DoseLog 'missed' count and NOT from a raw AdherenceStats sum.
 //
-// The adherence percentage is derived from AdherenceStats (same source as
-// the Weekly Adherence card) so the risk level is always consistent with
-// what the user sees in that card.
+// AdherenceStats rows are only written when a dose is manually logged
+// (recalculateStats() in escalationService.ts). The job meant to reconcile
+// days with no user action — checkAndEscalateMissedDoses(), which would
+// create 'missed' DoseLogs and recalculate stats — is not wired to any
+// cron/route in this app, so it never runs. A day the user never touched
+// has NO AdherenceStats row at all, so a naive sum of AdherenceStats.
+// totalDoses/takenDoses silently drops that day instead of counting its
+// scheduled doses as missed — that is what let a 20%-adherence week
+// compute as LOW risk.
+//
+// getAdherenceWindow() fixes this by reconstructing the true scheduled
+// count for the window directly from the Medication schedule (the exact
+// same computation the Weekly Adherence card uses), so a day with zero
+// logged activity still counts its full scheduled dose load against
+// adherence instead of vanishing from the denominator.
 //
 // Code path for riskLevel (nothing else touches it):
-//   1. 7-day taken/scheduled queried from AdherenceStats
-//   2. adherencePct7d = Math.round(taken7d / scheduled7d * 100)
+//   1. getAdherenceWindow(userId, 7) → { totalScheduled, totalTaken, overallRate }
+//   2. adherencePct7d = overallRate (schedule-reconstructed, not a raw AdherenceStats sum)
 //   3. deterministicRisk = computeRiskLevel(adherencePct7d)
 //   4. returned as riskLevel in the JSON response
 //   No model output reaches this field.
@@ -57,26 +66,13 @@ export async function GET(req: NextRequest) {
     if (!userData) throw new Error('User not found');
 
     // ── 1. Compute 7-day adherence percentage (deterministic risk input) ───────
-    // This is the same calculation the Weekly Adherence card uses, so the risk
-    // level will always be consistent with that number.
+    // Schedule-reconstructed, not a raw AdherenceStats sum — see comment above.
+    // This is the exact same calculation the Weekly Adherence card uses, so the
+    // risk level can never diverge from that number.
     const now = new Date();
-    const sevenDaysAgo = new Date(now);
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
-    const todayStr = now.toISOString().split('T')[0];
 
-    const recentStats = await AdherenceStats.find({
-      userId: user.id,
-      date: { $gte: sevenDaysAgoStr, $lte: todayStr },
-    });
-
-    const taken7d  = recentStats.reduce((s, d) => s + (d.takenDoses  ?? 0), 0);
-    const sched7d  = recentStats.reduce((s, d) => s + (d.totalDoses   ?? 0), 0);
-    const missed7d = recentStats.reduce((s, d) => s + (d.missedDoses  ?? 0), 0);
-
-    // adherencePct7d: taken / scheduled over the last 7 days.
-    // If sched7d is 0 the user has no history → insufficientData.
-    const adherencePct7d = sched7d > 0 ? Math.round((taken7d / sched7d) * 100) : 0;
+    const { totalScheduled: sched7d, totalTaken: taken7d, totalMissed: missed7d, overallRate: adherencePct7d } =
+      await getAdherenceWindow(user.id, 7);
 
     // ── 2. Insufficient-data guard ────────────────────────────────────────────
     const days_since_start = differenceInDays(new Date(), new Date(userData.createdAt)) || 1;

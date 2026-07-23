@@ -79,7 +79,9 @@ Rules:
 - Correct medicine name spelling errors
 - foodInstruction must be: after_meal | before_meal | with_meal | empty_stomach | any_time
 - Infer times from frequency (once=["08:00"], twice=["08:00","20:00"], thrice=["08:00","14:00","20:00"])
-- Parse "1-0-1" notation as morning+evening doses`;
+- Parse "1-0-1" notation as morning+evening doses
+- form must be EXACTLY one of: tablet | capsule | liquid | syrup | suspension | injection | inhaler | drops | patch | powder | cream | ointment | gel | lotion | soap | sunscreen | shampoo | other. If unsure, use "other" — never guess "tablet".
+- duration: leave as "" if not actually stated on the prescription. Do not invent a value.`;
 
         const imagePart = {
           inlineData: {

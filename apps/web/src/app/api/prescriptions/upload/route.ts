@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/auth';
 import connectDB from '@/lib/mongoose';
 import Prescription from '@/models/Prescription';
 import { scanPrescription } from '@/lib/mlClient';
+import { resolveMedicationForm } from '@/lib/escalationClassification';
 import fs from 'fs';
 import path from 'path';
 
@@ -83,11 +84,19 @@ export async function POST(req: NextRequest) {
             name: m.name,
             genericName: m.genericName || '',
             dosage: m.dosage || '',
-            form: m.form || 'tablet',
+            // Undetermined/unrecognized form -> 'other' (least aggressive
+            // escalation), never 'tablet'. See escalationClassification.ts.
+            form: resolveMedicationForm(m.form),
             frequency: m.frequency || 'Once daily',
             times: m.times || mapFrequencyToTimes(m.frequency),
             foodInstruction: m.foodInstruction || 'after_meal',
-            duration: m.duration || '30 days',
+            // Pass duration through UNCHANGED — do NOT default to '30 days'
+            // here. add-medications/route.ts's parseDurationToEndDate()
+            // needs to see the real absence to flag needsDurationConfirmation
+            // instead of silently assuming a 30-day course (Blocker 2).
+            // A silent default here would defeat that check before it ever
+            // runs, since this field would never appear empty downstream.
+            duration: m.duration,
             specialInstructions: m.instructions || '',
             quantity: m.quantity || 30,
           })),
